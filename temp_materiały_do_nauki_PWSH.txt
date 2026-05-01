@@ -1,0 +1,23 @@
+https://learn.microsoft.com/en-us/powershell/scripting/overview?view=powershell-5.1
+https://learn.microsoft.com/en-us/powershell/
+https://www.spguides.com/powershell-examples/
+https://powershellexplained.com/2016-11-06-powershell-hashtable-everything-you-wanted-to-know-about/?utm_source=blog&utm_medium=blog&utm_content=indexref
+https://www.guru99.com/powershell-tutorial.html
+
+
+Rzeczy które chcę sam zrobić z siebie:
+- zdefiniować komendy startowe (tak jak sobie suatwiałem w linux bashrc neofetch .. czyli informacje o systemie)
+
+
+- ustawic oh-my-posh żeby działał w powershell
+https://claude.ai/chat/b39239f7-d6e3-49ce-9a56-9c3c88f839bd
+
+- przejrzec rzeczy co claude polecił mi, żeby zrobić, żeby się nauczyć powershell ... przejrzeć co mi się przyda a co nie w codziennej pracy
+https://claude.ai/chat/a229578d-708e-40fb-941b-50b8acffdc34
+
+
+https://code.visualstudio.com/docs/languages/powershell#_example-scripts
+
+--------------------
+Powershell jest powiązamy z Windows Forms (mnatywnym sposobem tworzenia aplikacji dektoipowych w C# w widnows),
+ale aktualnie jest zastępowany przez windows przez WinUI (biblioteka graficzna dla C#).
