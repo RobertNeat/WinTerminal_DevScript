@@ -30,4 +30,4 @@ function search_system_for_compiler {
     return $results
 }
 
-Export-ModuleMember -Function check_java_compiler
+Export-ModuleMember -Function search_system_for_compiler

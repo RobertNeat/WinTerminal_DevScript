@@ -25,10 +25,10 @@ chcp 65001 | Out-Null
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-
 # 0. Import funkcji do sprawdzania kompilatorów
 Import-Module ".\powershell_compiler_checkers\check_java_compiler.psm1"
 Import-Module ".\powershell_compiler_checkers\check_python_interpreter.psm1"
+Import-Module ".\powershell_compiler_checkers\check_node_runtime.psm1"
 
 # 1. Pobranie informacji o systemie operacyjnym, wersji powershella, ścieżkach do katalogów domowych i aktualnego katalogu
 
@@ -69,35 +69,16 @@ function print_initial_info {
     Write-Output "Ścieżka do aktualnego katalogu: $currentPath"
 }
 
-# deklaracja poszczególnych funkcji sprawdzających dostępność konpilatorów i ich wersji
-
-function check_node_runtime{
-}
-
-
-
-
-
 # deklaracja funkcji ustawiającej oh my posh dla powershella
-
-
 # deklaracja funkcji ustawiającej konfigurację terminala windows dla poszczególnych powłok
-
-
 # deklaracja funkcji ustawiającej motywy dla powłoki powershell (profil powershella)
 
-#trzeba ustawić kodowanie dla utf-8
-#chcp 65001 | Out-Null
-#[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-#$OutputEncoding = [System.Text.Encoding]::UTF8
-#$PSDefaultParameterValues['*:Encoding'] = 'utf8'
-
 # główne wywołanie poszcególnych funkcji (main execution flow)
-
 try {
-    #print_initial_info
-    #check_java_compiler
+    print_initial_info
+    check_java_compiler
     check_python_interpreter
+    check_node_runtime
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
