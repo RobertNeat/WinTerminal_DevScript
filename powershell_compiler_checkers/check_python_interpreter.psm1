@@ -1,4 +1,5 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
+
 function check_python_interpreter {
     $result = [PSCustomObject]@{
         Name        = "Python Interpreter"
@@ -21,7 +22,7 @@ function check_python_interpreter {
         'python3' = $null
     }
 
-    foreach ($cmdName in $pythonCommands.Keys) {
+    foreach ($cmdName in @($pythonCommands.Keys)) {
         try {
             $cmd = Get-Command $cmdName -ErrorAction SilentlyContinue
             if ($cmd) {
@@ -34,7 +35,7 @@ function check_python_interpreter {
 
     # Próba wywołania --version dla każdej znalezionej komendy
     # Wybieramy pierwszą, która zwróci poprawną wersję
-    foreach ($cmdName in $pythonCommands.Keys) {
+    foreach ($cmdName in @($pythonCommands.Keys)) {
         $cmd = $pythonCommands[$cmdName]
         if (-not $cmd) { continue }
 

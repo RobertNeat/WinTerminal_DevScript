@@ -71,11 +71,6 @@ function print_initial_info {
 
 # deklaracja poszczególnych funkcji sprawdzających dostępność konpilatorów i ich wersji
 
-
-
-function check_python_interpreter {
-}
-
 function check_node_runtime{
 }
 
@@ -100,13 +95,11 @@ function check_node_runtime{
 # główne wywołanie poszcególnych funkcji (main execution flow)
 
 try {
-    print_initial_info
-    check_java_compiler
+    #print_initial_info
+    #check_java_compiler
     check_python_interpreter
 }
 catch {
-    Write-Output "Error: $($_.Exception.Message)"
-    
-
-    Write-Output "🐦‍🔥📎⚙️"
-}
+    #Write-Output "Error: $($_.Exception.Message)"
+    Write-Output $_
+}# https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-exceptions?view=powershell-5.1
