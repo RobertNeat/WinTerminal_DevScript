@@ -29,6 +29,7 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 Import-Module ".\powershell_compiler_checkers\check_java_compiler.psm1"
 Import-Module ".\powershell_compiler_checkers\check_python_interpreter.psm1"
 Import-Module ".\powershell_compiler_checkers\check_node_runtime.psm1"
+Import-Module ".\powershell_compiler_checkers\check_git.psm1"
 
 # 1. Pobranie informacji o systemie operacyjnym, wersji powershella, ścieżkach do katalogów domowych i aktualnego katalogu
 
@@ -79,6 +80,7 @@ try {
     check_java_compiler
     check_python_interpreter
     check_node_runtime
+    check_git
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
