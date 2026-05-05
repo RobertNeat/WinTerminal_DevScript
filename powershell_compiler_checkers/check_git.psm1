@@ -9,7 +9,6 @@ function check_git {
 		LatestVersion   = $null
 		UpdateAvailable = $false
 		WingetAvailable = $false
-		GitExePath      = $null
 		GitHome         = $null
 		Manager         = $null
 		GitExecPath     = $null
@@ -91,25 +90,6 @@ function check_git {
 		return $null
 	}
 
-	function Infer-GitHomeFromExePath {
-		param([string]$GitExePath)
-		if (-not $GitExePath) { return $null }
-		try {
-			$dir = Split-Path $GitExePath -Parent
-			# Typowe: C:\Program Files\Git\cmd\git.exe lub ...\bin\git.exe
-			if ($GitExePath -match '(?i)\\Git\\cmd\\git\.exe$') {
-				return (Split-Path $dir -Parent)
-			}
-			if ($GitExePath -match '(?i)\\Git\\bin\\git\.exe$') {
-				return (Split-Path $dir -Parent)
-			}
-			# MSYS2: ...\usr\bin\git.exe lub ...\mingw64\bin\git.exe
-			return $dir
-		} catch {
-			return $null
-		}
-	}
-
 	function Infer-ManagerFromPath {
 		param([string]$ExePath)
 		if (-not $ExePath) { return $null }
@@ -147,8 +127,7 @@ function check_git {
 				$result.Installed  = $true
 				$result.InPath     = $true
 				$result.Version    = $parsed
-				$result.GitExePath = $gitCmd.Source
-				$result.GitHome    = Infer-GitHomeFromExePath $gitCmd.Source
+				$result.GitHome    = $gitCmd.Source
 				$result.Manager    = Infer-ManagerFromPath $gitCmd.Source
 			} else {
 				$result.Errors.Add("Nie udało się sparsować wersji Git z 'git --version'. Surowy wynik: '$($gitVersionStr.Trim())'")
@@ -176,8 +155,8 @@ function check_git {
 		$userPath    = [System.Environment]::GetEnvironmentVariable('Path', 'User')
 		$processPath = $env:Path
 
-		if ($result.GitExePath) {
-			$gitExeDir = Split-Path $result.GitExePath -Parent
+		if ($result.GitHome) {
+			$gitExeDir = Split-Path $result.GitHome -Parent
 			$hasInMachine = Test-PathContainsDirectory -PathVariableValue $machinePath -Directory $gitExeDir
 			$hasInUser    = Test-PathContainsDirectory -PathVariableValue $userPath    -Directory $gitExeDir
 			$hasInProcess = Test-PathContainsDirectory -PathVariableValue $processPath -Directory $gitExeDir
@@ -228,8 +207,7 @@ function check_git {
 					Select-Object -First 1
 
 				$result.Installed  = $true
-				$result.GitExePath = $best.FullPath
-				$result.GitHome    = Infer-GitHomeFromExePath $best.FullPath
+				$result.GitHome    = $best.FullPath
 				$result.Manager    = Infer-ManagerFromPath $best.FullPath
 				$result.Errors.Add("Znaleziono 'git.exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie '$($best.Directory)' do PATH.")
 
