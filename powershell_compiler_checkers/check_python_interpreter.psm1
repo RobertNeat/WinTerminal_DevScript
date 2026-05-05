@@ -1,242 +1,315 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
 
 function check_python_interpreter {
-    $result = [PSCustomObject]@{
-        Name        = "Python Interpreter"
-        Installed   = $false
-        InPath      = $false
-        Version     = $null
-        AllVersions = @()
-        Manager     = $null
-        PythonHome  = $null
-        Errors      = (New-Object System.Collections.Generic.List[string])
-    }
+	$result = [PSCustomObject]@{
+		Name        = "Python Interpreter"
+		Installed   = $false
+		InPath      = $false
+		Version     = $null
+		AllVersions = @()
+		Manager     = $null
+		PythonHome  = $null  # pełna ścieżka do wykonywalnego python.exe (sys.executable)
+		Errors      = (New-Object System.Collections.Generic.List[string])
+	}
 
-    # -------------------------------------------------------------------------
-    # 1. Sprawdzenie dostępności python / python3 z poziomu PATH
-    # -------------------------------------------------------------------------
+	function Get-EnvVarValue {
+		param([Parameter(Mandatory = $true)][string]$Name)
+		$value = [System.Environment]::GetEnvironmentVariable($Name, 'Machine')
+		if (-not $value) { $value = [System.Environment]::GetEnvironmentVariable($Name, 'User') }
+		if (-not $value) { $value = [System.Environment]::GetEnvironmentVariable($Name) }
+		return $value
+	}
 
-    # Słownik: nazwa komendy -> zmienna przechowująca wynik Get-Command
-    $pythonCommands = [ordered]@{
-        'python'  = $null
-        'python3' = $null
-    }
+	function Normalize-PathEntry {
+		param([string]$Path)
+		if (-not $Path) { return $null }
+		$p = $Path.Trim()
+		if ($p.StartsWith('"') -and $p.EndsWith('"')) {
+			$p = $p.Trim('"')
+		}
+		return $p.Trim().TrimEnd('\\')
+	}
 
-    foreach ($cmdName in @($pythonCommands.Keys)) {
-        try {
-            $cmd = Get-Command $cmdName -ErrorAction SilentlyContinue
-            if ($cmd) {
-                $pythonCommands[$cmdName] = $cmd
-            }
-        } catch {
-            $result.Errors.Add("Błąd przy Get-Command '$cmdName': $($_.Exception.Message)")
-        }
-    }
+	function Test-PathContainsDirectory {
+		param(
+			[string]$PathVariableValue,
+			[string]$Directory
+		)
 
-    # Próba wywołania --version dla każdej znalezionej komendy
-    # Wybieramy pierwszą, która zwróci poprawną wersję
-    foreach ($cmdName in @($pythonCommands.Keys)) {
-        $cmd = $pythonCommands[$cmdName]
-        if (-not $cmd) { continue }
+		if (-not $PathVariableValue -or -not $Directory) { return $false }
+		$dirNorm = Normalize-PathEntry $Directory
+		if (-not $dirNorm) { return $false }
 
-        try {
-            # Python 3.4+ pisze wersję na stdout; starsze wersje na stderr — dlatego 2>&1
-            $versionOutput = & $cmdName --version 2>&1
-            $versionString = $versionOutput | Select-Object -First 1 | Out-String
+		foreach ($entry in ($PathVariableValue -split ';')) {
+			$entryNorm = Normalize-PathEntry $entry
+			if ($entryNorm -and ($entryNorm -ieq $dirNorm)) { return $true }
+		}
 
-            if ($versionString -match '(\d+\.\d+\.\d+)') {
-                $result.Installed   = $true
-                $result.InPath      = $true
-                $result.Version     = $Matches[1]
-                $result.PythonHome  = Split-Path $cmd.Source -Parent
+		return $false
+	}
 
-                # Sprawdzamy, czy komendy wskazują na shim pyenv-win
-                # Shim pyenv-win znajduje się w .pyenv\pyenv-win\shims\
-                if ($cmd.Source -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') {
-                    $result.Manager = "pyenv-win"
-                }
+	function Try-ParsePythonVersion {
+		param([string]$Line)
+		if (-not $Line) { return $null }
+		if ($Line -match '(\d+\.\d+\.\d+)') { return $Matches[1] }
+		return $null
+	}
 
-                break  # wystarczy pierwsza poprawna odpowiedź
-            } else {
-                $result.Errors.Add("Nie udało się sparsować wersji z '$cmdName --version'. Surowy wynik: '$($versionString.Trim())'")
-            }
-        } catch {
-            $result.Errors.Add("Błąd przy wywołaniu '$cmdName --version': $($_.Exception.Message)")
-        }
-    }
+	function Try-GetPythonSysExecutable {
+		param([Parameter(Mandatory = $true)][string]$PythonPath)
+		try {
+			$out = & $PythonPath @('-c', 'import sys; print(sys.executable)') 2>&1
+			$line = ($out | Select-Object -First 1 | Out-String).Trim()
+			if ($line -and (Test-Path $line)) { return $line }
+		} catch {
+			return $null
+		}
+		return $null
+	}
 
-    # -------------------------------------------------------------------------
-    # 2. Sprawdzenie pyenv-win przez zmienne środowiskowe
-    #    (niezależnie od tego, czy python.exe już znaleziono w PATH,
-    #     bo chcemy zebrać AllVersions i potwierdzić Manager)
-    # -------------------------------------------------------------------------
+	function Try-GetPythonVersion {
+		param([Parameter(Mandatory = $true)][string]$PythonPath)
+		try {
+			$out = & $PythonPath @('--version') 2>&1
+			$line = ($out | Select-Object -First 1 | Out-String).Trim()
+			return (Try-ParsePythonVersion $line)
+		} catch {
+			return $null
+		}
+	}
 
-    # pyenv-win ustawia PYENV lub PYENV_ROOT (zależnie od wersji instalatora)
-    $pyenvRoot = $null
+	function Resolve-PyenvRoot {
+		$pyenvRoot = $null
+		foreach ($varName in @('PYENV_ROOT', 'PYENV')) {
+			$candidate = Get-EnvVarValue -Name $varName
+			if ($candidate -and (Test-Path $candidate)) {
+				$pyenvRoot = $candidate
+				break
+			} elseif ($candidate) {
+				$result.Errors.Add("Zmienna '$varName' wskazuje na nieistniejącą ścieżkę: '$candidate'")
+			}
+		}
 
-    foreach ($varName in @('PYENV_ROOT', 'PYENV')) {
-        $candidate = [System.Environment]::GetEnvironmentVariable($varName, 'Machine')
-        if (-not $candidate) {
-            $candidate = [System.Environment]::GetEnvironmentVariable($varName, 'User')
-        }
-        if (-not $candidate) {
-            $candidate = [System.Environment]::GetEnvironmentVariable($varName)  # bieżący proces
-        }
+		if (-not $pyenvRoot) {
+			$defaultPyenvRoot = Join-Path $env:USERPROFILE '.pyenv\\pyenv-win'
+			if (Test-Path $defaultPyenvRoot) { $pyenvRoot = $defaultPyenvRoot }
+		}
 
-        if ($candidate -and (Test-Path $candidate)) {
-            $pyenvRoot = $candidate
-            break
-        } elseif ($candidate) {
-            $result.Errors.Add("Zmienna '$varName' wskazuje na nieistniejącą ścieżkę: '$candidate'")
-        }
-    }
+		return $pyenvRoot
+	}
 
-    # Jeśli zmienna nie istnieje, sprawdzamy domyślną lokalizację pyenv-win
-    if (-not $pyenvRoot) {
-        $defaultPyenvRoot = Join-Path $env:USERPROFILE '.pyenv\pyenv-win'
-        if (Test-Path $defaultPyenvRoot) {
-            $pyenvRoot = $defaultPyenvRoot
-        }
-    }
+	function Resolve-PyenvShimPython {
+		param([Parameter(Mandatory = $true)][string]$PyenvRoot)
+		$shimsDir = Join-Path $PyenvRoot 'shims'
+		$candidates = @(
+			(Join-Path $shimsDir 'python.bat'),
+			(Join-Path $shimsDir 'python3.bat'),
+			(Join-Path $shimsDir 'python.cmd'),
+			(Join-Path $shimsDir 'python3.cmd'),
+			(Join-Path $shimsDir 'python.exe'),
+			(Join-Path $shimsDir 'python3.exe')
+		)
+		foreach ($p in $candidates) {
+			if (Test-Path $p) { return $p }
+		}
+		return $null
+	}
 
-    if ($pyenvRoot) {
-        $result.Manager = "pyenv-win"
+	$machinePath = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
+	$userPath    = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+	$processPath = $env:Path
 
-        # 2a. Aktywna wersja pyenv (plik .python-version lub `pyenv version`)
-        if (-not $result.Installed) {
-            $pythonVersionFile = Join-Path $pyenvRoot '..\version'  # pyenv-win trzyma tu globalną wersję
-            if (-not (Test-Path $pythonVersionFile)) {
-                # alternatywna lokalizacja — plik w katalogu domowym
-                $pythonVersionFile = Join-Path $env:USERPROFILE '.python-version'
-            }
+	# -------------------------------------------------------------------------
+	# 1) pyenv-win FIRST
+	# -------------------------------------------------------------------------
 
-            if (Test-Path $pythonVersionFile) {
-                $activeVersion = (Get-Content $pythonVersionFile -Raw).Trim()
-                if ($activeVersion -match '(\d+\.\d+\.\d+)') {
-                    $activeVersion = $Matches[1]
-                    $shimPythonPath = Join-Path $pyenvRoot 'shims\python.exe'
+	$pyenvRoot = Resolve-PyenvRoot
+	if ($pyenvRoot) {
+		$result.Manager = 'pyenv-win'
 
-                    if (Test-Path $shimPythonPath) {
-                        $result.Installed  = $true
-                        $result.Version    = $activeVersion
-                        $result.PythonHome = Join-Path $pyenvRoot "versions\$activeVersion"
-                    } else {
-                        $result.Errors.Add("pyenv-win: znaleziono aktywną wersję '$activeVersion', ale brak shim: '$shimPythonPath'")
-                    }
-                }
-            }
-        }
+		# AllVersions
+		try {
+			$versionsDir = Join-Path $pyenvRoot 'versions'
+			if (Test-Path $versionsDir) {
+				$installedVersions = Get-ChildItem -Path $versionsDir -Directory -ErrorAction SilentlyContinue |
+					Where-Object { $_.Name -match '^\d+\.\d+\.\d+' } |
+					Select-Object -ExpandProperty Name
+				if ($installedVersions) {
+					$result.AllVersions = @($installedVersions)
+					$result.Installed   = $true
+				}
+			} else {
+				$result.Errors.Add("pyenv-win: katalog versions\\ nie istnieje: '$versionsDir'")
+			}
+		} catch {
+			$result.Errors.Add("Błąd przy odczycie wersji pyenv-win: $($_.Exception.Message)")
+		}
 
-        # 2b. Lista wszystkich zainstalowanych wersji w katalogu versions\
-        try {
-            $versionsDir = Join-Path $pyenvRoot 'versions'
-            if (Test-Path $versionsDir) {
-                $installedVersions = Get-ChildItem -Path $versionsDir -Directory -ErrorAction SilentlyContinue |
-                    Where-Object { $_.Name -match '^\d+\.\d+\.\d+' } |
-                    Select-Object -ExpandProperty Name
+		$shimsDir = Join-Path $pyenvRoot 'shims'
+		$shimsInPath = (
+			(Test-PathContainsDirectory -PathVariableValue $machinePath -Directory $shimsDir) -or
+			(Test-PathContainsDirectory -PathVariableValue $userPath    -Directory $shimsDir) -or
+			(Test-PathContainsDirectory -PathVariableValue $processPath -Directory $shimsDir)
+		)
+		if ($shimsInPath) { $result.InPath = $true }
 
-                if ($installedVersions) {
-                    $result.AllVersions = @($installedVersions)
-                    $result.Installed   = $true
-                }
-            } else {
-                $result.Errors.Add("pyenv-win: katalog versions\ nie istnieje: '$versionsDir'")
-            }
-        } catch {
-            $result.Errors.Add("Błąd przy odczycie wersji pyenv-win: $($_.Exception.Message)")
-        }
+		$shim = Resolve-PyenvShimPython -PyenvRoot $pyenvRoot
+		if ($shim) {
+			$realExe = Try-GetPythonSysExecutable -PythonPath $shim
+			if ($realExe) {
+				$result.Installed  = $true
+				$result.PythonHome = $realExe
+				$ver = Try-GetPythonVersion -PythonPath $shim
+				if ($ver) { $result.Version = $ver }
+			} else {
+				$result.Errors.Add("pyenv-win: nie udało się uzyskać sys.executable z shima: '$shim'.")
+			}
+		} else {
+			$result.Errors.Add("pyenv-win: nie znaleziono shima python (python.bat/python3.bat/python.exe) w '$shimsDir'.")
+		}
 
-        # 2c. Jeśli Version nadal puste, a AllVersions ma wpisy — bierzemy najnowszą
-        if (-not $result.Version -and $result.AllVersions.Count -gt 0) {
-            $result.Version = $result.AllVersions |
-                Sort-Object { [Version]($_ -replace '[^0-9.]', '') } -Descending |
-                Select-Object -First 1
-            $result.Errors.Add("pyenv-win: brak aktywnej wersji (.python-version), przyjęto najnowszą zainstalowaną: '$($result.Version)'")
-        }
-    }
+		if (-not $result.Version -and $result.PythonHome) {
+			$ver = Try-GetPythonVersion -PythonPath $result.PythonHome
+			if ($ver) { $result.Version = $ver }
+		}
+	}
 
-    # -------------------------------------------------------------------------
-    # 3. Przeszukanie systemu przez search_system_for_compiler
-    #    (tylko jeśli nadal nie znaleziono instalacji)
-    # -------------------------------------------------------------------------
+	# -------------------------------------------------------------------------
+	# 2) Klasyczny Python (dopiero jeśli nie mamy realnego python.exe powyżej)
+	# -------------------------------------------------------------------------
 
-    if (-not $result.Installed) {
-        try {
-            $pythonPossiblePaths = @(
-                # Instalacje z python.org (katalog wersjonowany)
-                "$env:LOCALAPPDATA\Programs\Python",
-                "C:\Python312",
-                "C:\Python311",
-                "C:\Python310",
-                "C:\Python39",
-                "C:\Python38",
-                # pyenv-win (shims + versions)
-                "$env:USERPROFILE\.pyenv\pyenv-win\shims",
-                "$env:USERPROFILE\.pyenv\pyenv-win\versions",
-                # Menedżery pakietów
-                "$env:USERPROFILE\scoop\apps\python",
-                "$env:USERPROFILE\scoop\apps\pyenv",
-                "C:\ProgramData\chocolatey\lib\python",
-                # Dystrybucja Anaconda / Miniconda
-                "$env:USERPROFILE\anaconda3",
-                "$env:USERPROFILE\miniconda3",
-                "$env:LOCALAPPDATA\anaconda3",
-                "$env:LOCALAPPDATA\miniconda3",
-                "C:\ProgramData\Anaconda3",
-                "C:\ProgramData\Miniconda3"
-            )
+	if (-not $result.PythonHome) {
+		foreach ($cmdName in @('python', 'python3')) {
+			$cmds = @()
+			try {
+				$cmds = @(Get-Command $cmdName -All -ErrorAction SilentlyContinue)
+			} catch {
+				$result.Errors.Add("Błąd przy Get-Command '$cmdName': $($_.Exception.Message)")
+				continue
+			}
+			if (-not $cmds -or $cmds.Count -eq 0) { continue }
 
-            $found = search_system_for_compiler `
-                -CompilerNames     @('python', 'python3') `
-                -CompilerExtension 'exe' `
-                -SearchPaths       $pythonPossiblePaths `
-                -Depth             4
+			$ordered = $cmds |
+				Where-Object { $_ -and $_.Source } |
+				Sort-Object -Property @(
+					@{ Expression = { if ($_.Source -match '\\Microsoft\\WindowsApps\\python(3)?\\.exe$') { 2 } else { 0 } } },
+					@{ Expression = { $_.Source.Length } }
+				)
 
-            if ($found.Count -gt 0) {
-                # Preferuj python3.exe jeśli dostępny, inaczej python.exe
-                $best = $found | Where-Object { $_.CompilerName -eq 'python3' } | Select-Object -First 1
-                if (-not $best) {
-                    $best = $found | Where-Object { $_.CompilerName -eq 'python'  } | Select-Object -First 1
-                }
+			foreach ($c in $ordered) {
+				$src = $c.Source
+				if ($src -match '\\Microsoft\\WindowsApps\\python(3)?\\.exe$') {
+					$result.Errors.Add("Wykryto alias WindowsApps dla '$cmdName': '$src'. To może nie być realny Python (App Execution Alias).")
+					continue
+				}
 
-                $result.Installed  = $true
-                $result.PythonHome = $best.Directory
+				$realExe = Try-GetPythonSysExecutable -PythonPath $src
+				if (-not $realExe) {
+					$result.Errors.Add("Nie udało się uzyskać sys.executable z '$src'.")
+					continue
+				}
 
-                # Spróbuj pobrać wersję wywołując znaleziony plik bezpośrednio
-                try {
-                    $versionOutput = & $best.FullPath --version 2>&1
-                    $versionString = $versionOutput | Select-Object -First 1 | Out-String
-                    if ($versionString -match '(\d+\.\d+\.\d+)') {
-                        $result.Version = $Matches[1]
-                    }
-                } catch {
-                    $result.Errors.Add("Błąd przy pobieraniu wersji z '$($best.FullPath)': $($_.Exception.Message)")
-                }
+				$result.Installed  = $true
+				$result.InPath     = $true
+				$result.PythonHome = $realExe
+				$ver = Try-GetPythonVersion -PythonPath $src
+				if ($ver) { $result.Version = $ver }
+				if ($src -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') { $result.Manager = 'pyenv-win' }
+				break
+			}
 
-                # Ustal manager na podstawie ścieżki
-                if ($best.FullPath -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') {
-                    $result.Manager = "pyenv-win"
-                } elseif ($best.FullPath -match '[\\/]anaconda|[\\/]miniconda' ) {
-                    $result.Manager = "conda"
-                } elseif ($best.FullPath -match '[\\/]scoop[\\/]') {
-                    $result.Manager = "scoop"
-                } elseif ($best.FullPath -match '[\\/]chocolatey[\\/]') {
-                    $result.Manager = "chocolatey"
-                }
+			if ($result.PythonHome) { break }
+		}
+	}
 
-                $result.Errors.Add("Znaleziono '$($best.CompilerName).exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie '$($best.Directory)' do zmiennych środowiskowych.")
-            }
-        } catch {
-            $result.Errors.Add("Błąd podczas wywołania search_system_for_compiler: $($_.Exception.Message)")
-        }
-    }
+	# -------------------------------------------------------------------------
+	# 3) Walidacja zmiennych środowiskowych / misconfig
+	# -------------------------------------------------------------------------
 
-    # -------------------------------------------------------------------------
-    # Zwróć wynik
-    # -------------------------------------------------------------------------
+	try {
+		$pythonHomeEnv = Get-EnvVarValue -Name 'PYTHONHOME'
+		if ($pythonHomeEnv -and -not (Test-Path $pythonHomeEnv)) {
+			$result.Errors.Add("PYTHONHOME wskazuje na nieistniejącą ścieżkę: '$pythonHomeEnv'")
+		}
+	} catch {
+		$result.Errors.Add("Błąd przy odczycie PYTHONHOME: $($_.Exception.Message)")
+	}
 
-    $result.Errors = $result.Errors.ToArray()
-    return $result
+	if ($result.Manager -eq 'pyenv-win' -and $pyenvRoot) {
+		$shimsDir = Join-Path $pyenvRoot 'shims'
+		$shimsInPath = (
+			(Test-PathContainsDirectory -PathVariableValue $machinePath -Directory $shimsDir) -or
+			(Test-PathContainsDirectory -PathVariableValue $userPath    -Directory $shimsDir) -or
+			(Test-PathContainsDirectory -PathVariableValue $processPath -Directory $shimsDir)
+		)
+		if (-not $shimsInPath) {
+			$result.Errors.Add("pyenv-win: katalog shims nie występuje w PATH (Machine/User/Process): '$shimsDir'")
+		} else {
+			$result.InPath = $true
+		}
+	}
+
+	# -------------------------------------------------------------------------
+	# 4) Fallback: search_system_for_compiler
+	# -------------------------------------------------------------------------
+
+	if (-not $result.PythonHome) {
+		try {
+			$pythonPossiblePaths = @(
+				"$env:LOCALAPPDATA\\Programs\\Python",
+				"C:\\Python312",
+				"C:\\Python311",
+				"C:\\Python310",
+				"C:\\Python39",
+				"C:\\Python38",
+				"$env:USERPROFILE\\.pyenv\\pyenv-win\\shims",
+				"$env:USERPROFILE\\.pyenv\\pyenv-win\\versions",
+				"$env:USERPROFILE\\scoop\\apps\\python",
+				"$env:USERPROFILE\\scoop\\apps\\pyenv",
+				"C:\\ProgramData\\chocolatey\\lib\\python",
+				"$env:USERPROFILE\\anaconda3",
+				"$env:USERPROFILE\\miniconda3",
+				"$env:LOCALAPPDATA\\anaconda3",
+				"$env:LOCALAPPDATA\\miniconda3",
+				"C:\\ProgramData\\Anaconda3",
+				"C:\\ProgramData\\Miniconda3"
+			)
+
+			$found = search_system_for_compiler `
+				-CompilerNames     @('python', 'python3') `
+				-CompilerExtension 'exe' `
+				-SearchPaths       $pythonPossiblePaths `
+				-Depth             4
+
+			if ($found.Count -gt 0) {
+				$best = $found | Where-Object { $_.CompilerName -eq 'python3' } | Select-Object -First 1
+				if (-not $best) { $best = $found | Where-Object { $_.CompilerName -eq 'python' } | Select-Object -First 1 }
+
+				$result.Installed  = $true
+				$result.InPath     = $false
+				$result.PythonHome = $best.FullPath
+				$ver = Try-GetPythonVersion -PythonPath $best.FullPath
+				if ($ver) { $result.Version = $ver }
+
+				if ($best.FullPath -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') {
+					$result.Manager = 'pyenv-win'
+				} elseif ($best.FullPath -match '[\\/]anaconda|[\\/]miniconda') {
+					$result.Manager = 'conda'
+				} elseif ($best.FullPath -match '[\\/]scoop[\\/]') {
+					$result.Manager = 'scoop'
+				} elseif ($best.FullPath -match '[\\/]chocolatey[\\/]') {
+					$result.Manager = 'chocolatey'
+				}
+
+				$result.Errors.Add("Znaleziono '$($best.CompilerName).exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie katalogu do PATH.")
+			}
+		} catch {
+			$result.Errors.Add("Błąd podczas wywołania search_system_for_compiler: $($_.Exception.Message)")
+		}
+	}
+
+	$result.Errors = $result.Errors.ToArray()
+	return $result
 }
 
 Export-ModuleMember -Function check_python_interpreter

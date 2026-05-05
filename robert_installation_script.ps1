@@ -70,19 +70,28 @@ function print_initial_info {
     Write-Output "Ścieżka do aktualnego katalogu: $currentPath"
 }
 
-# deklaracja funkcji ustawiającej oh my posh dla powershella
 # deklaracja funkcji ustawiającej konfigurację terminala windows dla poszczególnych powłok
+#Import-Module ".\powershell_config_setters\set_terminal_configuration_profiles.psm1"
+
+# deklaracja funkcji ustawiającej oh my posh dla powershella
+#Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
+
 # deklaracja funkcji ustawiającej motywy dla powłoki powershell (profil powershella)
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
-    print_initial_info
-    check_java_compiler
+    #print_initial_info
+    #check_java_compiler
     check_python_interpreter
     check_node_runtime
     check_git
+
+    #Resolve-WindowsTerminalSettingsPath
+
+    #set_oh_my_posh_for_powershell
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
     Write-Output $_
+    #Write-Output $_.InvocationInfo <-- additional information about the exception
 }# https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-exceptions?view=powershell-5.1
