@@ -80,8 +80,8 @@ function print_initial_info {
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
-    #print_initial_info
-    #check_java_compiler
+    print_initial_info
+    check_java_compiler
     check_python_interpreter
     check_node_runtime
     check_git

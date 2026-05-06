@@ -31,3 +31,14 @@ Możliwość ustawienia zmiennych:
 
 - "tabColor" - deklaracja koloru zakładki w terminal dla danej powłoki shell,
   [Zmienne windows terminal](https://learn.microsoft.com/en-us/windows/terminal/customize-settings/profile-appearance)
+
+---
+
+### Wersja programu windows terminal
+
+Żeby sprawdzić wersję programu należy rozwinąć z paska zakładek rozwinąć strzałkę i kliknąć "About". Pojawi się okno z informacją o wersji programu.
+
+```
+Terminal Windows
+Version: 1.24.10921.0
+```
