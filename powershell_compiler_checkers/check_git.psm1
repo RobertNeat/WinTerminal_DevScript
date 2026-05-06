@@ -10,12 +10,88 @@ function check_git {
 		UpdateAvailable = $false
 		WingetAvailable = $false
 		GitHome         = $null
+		BashHome        = $null
 		Manager         = $null
 		GitExecPath     = $null
 		GitSsh          = $null
 		GitSshCommand   = $null
 		GitAskPass      = $null
 		Errors          = (New-Object System.Collections.Generic.List[string])
+	}
+
+	function Get-GitCandidateRoots {
+		param(
+			[Parameter(Mandatory = $true)][string]$GitExePath
+		)
+
+		$roots = New-Object System.Collections.Generic.List[string]
+
+		function Add-Root {
+			param([string]$Path)
+			if (-not $Path) { return }
+			$norm = Normalize-Dir $Path
+			if (-not $norm) { return }
+			if (-not ($roots.Contains($norm))) {
+				$roots.Add($norm)
+			}
+		}
+
+		try {
+			$gitExeDir = Split-Path $GitExePath -Parent
+			Add-Root (Split-Path $gitExeDir -Parent) # ...\Git\cmd\git.exe -> ...\Git
+			Add-Root $gitExeDir
+		} catch {
+			# ignore
+		}
+
+		try {
+			# Git for Windows typically returns something like:
+			#   C:\Program Files\Git\mingw64\libexec\git-core
+			# or C:\Program Files\Git\libexec\git-core
+			$execPathOut = & $GitExePath --exec-path 2>$null
+			$execPath = ($execPathOut | Select-Object -First 1 | Out-String).Trim()
+			if ($execPath) {
+				Add-Root (Split-Path (Split-Path $execPath -Parent) -Parent) # trim \libexec\git-core
+				Add-Root (Split-Path $execPath -Parent)
+				Add-Root $execPath
+				# handle mingw64\libexec\git-core by also trying to trim one more segment
+				$parent = Split-Path (Split-Path (Split-Path $execPath -Parent) -Parent) -Parent
+				Add-Root $parent
+			}
+		} catch {
+			# ignore; not fatal
+		}
+
+		return $roots.ToArray()
+	}
+
+	function Find-GitBashLauncher {
+		param(
+			[Parameter(Mandatory = $true)][string]$GitExePath
+		)
+
+		$roots = Get-GitCandidateRoots -GitExePath $GitExePath
+		foreach ($root in $roots) {
+			# Prefer real bash.exe shipped with Git for Windows
+			$candidates = @(
+				(Join-Path $root 'usr\bin\bash.exe'),
+				(Join-Path $root 'bin\bash.exe'),
+				(Join-Path $root 'mingw64\bin\bash.exe'),
+				(Join-Path $root 'git-bash.exe')
+			)
+
+			foreach ($candidate in $candidates) {
+				try {
+					if ($candidate -and (Test-Path $candidate)) {
+						return $candidate
+					}
+				} catch {
+					# ignore
+				}
+			}
+		}
+
+		return $null
 	}
 
 	function Get-EnvVarValue {
@@ -128,7 +204,11 @@ function check_git {
 				$result.InPath     = $true
 				$result.Version    = $parsed
 				$result.GitHome    = $gitCmd.Source
+				$result.BashHome   = Find-GitBashLauncher -GitExePath $gitCmd.Source
 				$result.Manager    = Infer-ManagerFromPath $gitCmd.Source
+				if (-not $result.BashHome) {
+					$result.Errors.Add("Nie udało się odnaleźć bash.exe (ani git-bash.exe) dla wykrytego Git: '$($gitCmd.Source)'.")
+				}
 			} else {
 				$result.Errors.Add("Nie udało się sparsować wersji Git z 'git --version'. Surowy wynik: '$($gitVersionStr.Trim())'")
 			}
@@ -208,8 +288,12 @@ function check_git {
 
 				$result.Installed  = $true
 				$result.GitHome    = $best.FullPath
+				$result.BashHome   = Find-GitBashLauncher -GitExePath $best.FullPath
 				$result.Manager    = Infer-ManagerFromPath $best.FullPath
 				$result.Errors.Add("Znaleziono 'git.exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie '$($best.Directory)' do PATH.")
+				if (-not $result.BashHome) {
+					$result.Errors.Add("Nie udało się odnaleźć bash.exe (ani git-bash.exe) dla znalezionego Git: '$($best.FullPath)'.")
+				}
 
 				try {
 					$verOut = & $best.FullPath --version 2>&1

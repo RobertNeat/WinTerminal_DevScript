@@ -80,11 +80,25 @@ Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
-    #print_initial_info
-    #check_java_compiler
-    #check_python_interpreter
-    #check_node_runtime
-    #check_git
+    print_initial_info
+
+    check_git
+
+    $java = check_java_compiler
+    $python = check_python_interpreter
+    $node = check_node_runtime
+    $git = check_git
+
+    Write-Output "$java"
+    Write-Output "$python"
+    Write-Output "$node"
+    Write-Output "$git"
+
+    $executables_list = @()
+    $executables_list += $java.JavaHome
+    $executables_list += $python.PythonHome
+    $executables_list += $node.NodeHome
+    $executables_list += $git.GitHome
 
     Resolve-WindowsTerminalSettingsPath
 
