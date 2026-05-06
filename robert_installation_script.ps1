@@ -82,25 +82,23 @@ Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 try {
     print_initial_info
 
-    check_git
-
     $java = check_java_compiler
     $python = check_python_interpreter
     $node = check_node_runtime
     $git = check_git
+    Write-Output $java
+    Write-Output $python
+    Write-Output $node
+    Write-Output $git
 
-    Write-Output "$java"
-    Write-Output "$python"
-    Write-Output "$node"
-    Write-Output "$git"
+    $executables_map = [ordered]@{
+        git    = $git.BashHome
+        python = $python.PythonHome
+        node   = $node.NodeHome
+    }
 
-    $executables_list = @()
-    $executables_list += $java.JavaHome
-    $executables_list += $python.PythonHome
-    $executables_list += $node.NodeHome
-    $executables_list += $git.GitHome
-
-    Resolve-WindowsTerminalSettingsPath
+    $check = Update-TerminalProfiles -ExecutablesMap $executables_map
+    Write-Output $check
 
     #set_oh_my_posh_for_powershell
 }

@@ -83,6 +83,12 @@ function Get-ExistingTerminalProfiles {
 # - add entries for git bash, node, python (if not already present)
 # - customize icons, names, color schemes for the entries
 function Update-TerminalProfiles {
+    param(
+        # Preferred: key -> executable path map, e.g. @{ git = '...\bash.exe'; node = '...\node.exe'; python = '...\python.exe' }
+        [hashtable] $ExecutablesMap
+    )
+
+    
     # input: windows terminal settings path
     # input: list of existing profiles (name + executable)
     # input: list of executables to add (git bash, node, python)
@@ -93,7 +99,9 @@ function Update-TerminalProfiles {
     # https://learn.microsoft.com/en-us/windows/terminal/tutorials/shell-integration#shell-integration-features
 
     # https://github.com/microsoft/terminal
+
+    # NOTE: profile editing is not implemented yet; return normalized inputs for now.
+    return $ExecutablesMap
 }
 
-
-Export-ModuleMember -Function Resolve-WindowsTerminalSettingsPath
+Export-ModuleMember -Function Resolve-WindowsTerminalSettingsPath, Update-TerminalProfiles
