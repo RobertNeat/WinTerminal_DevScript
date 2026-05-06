@@ -80,25 +80,31 @@ Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
-    print_initial_info
+    # print_initial_info
 
-    $java = check_java_compiler
-    $python = check_python_interpreter
-    $node = check_node_runtime
-    $git = check_git
-    Write-Output $java
-    Write-Output $python
-    Write-Output $node
-    Write-Output $git
+    # $java = check_java_compiler
+    # $python = check_python_interpreter
+    # $node = check_node_runtime
+    # $git = check_git
+    # Write-Output $java
+    # Write-Output $python
+    # Write-Output $node
+    # Write-Output $git
 
-    $executables_map = [ordered]@{
-        git    = $git.BashHome
-        python = $python.PythonHome
-        node   = $node.NodeHome
-    }
+    # $executables_map = [ordered]@{
+    #     git    = $git.BashHome
+    #     python = $python.PythonHome
+    #     node   = $node.NodeHome
+    # }
 
-    $check = Update-TerminalProfiles -ExecutablesMap $executables_map
-    Write-Output $check
+    #$check = Update-TerminalProfiles -ExecutablesMap $executables_map
+    #Write-Output $check
+
+    $terminal_settings_path = Resolve-WindowsTerminalSettingsPath
+    $conf = Get-ExistingTerminalConfiguration -settingsPath $terminal_settings_path -JsonDepth 10
+    Write-Output $conf
+
+    Write-Output $conf.settings.profiles.list
 
     #set_oh_my_posh_for_powershell
 }
