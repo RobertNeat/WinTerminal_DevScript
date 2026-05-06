@@ -13,29 +13,41 @@ function Resolve-WindowsTerminalSettingsPath {
     }
 
     $candidates = New-Object System.Collections.Generic.List[string]
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]'
 
-    # 1) Best: discover installed package family name(s) dynamically
+    function Add-CandidatePath {
+        param([Parameter(Mandatory = $true)][string] $Path)
+        if ([string]::IsNullOrWhiteSpace($Path)) { return }
+        if ($seen.Add($Path)) { [void]$candidates.Add($Path) }
+    }
+
+    # Prefer the documented locations first (stable -> preview).
+    Add-CandidatePath (Join-Path $env:LOCALAPPDATA "Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
+    Add-CandidatePath (Join-Path $env:LOCALAPPDATA "Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json")
+
+    # Also discover installed package family name(s) dynamically (covers Canary/other variants).
     try {
         $pkgs = Get-AppxPackage -Name "Microsoft.WindowsTerminal*" -ErrorAction Stop
-        foreach ($pkg in $pkgs) {
+
+        $orderedPkgs = @()
+        $orderedPkgs += $pkgs | Where-Object { $_.PackageFamilyName -eq "Microsoft.WindowsTerminal_8wekyb3d8bbwe" }
+        $orderedPkgs += $pkgs | Where-Object { $_.PackageFamilyName -eq "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe" }
+        $orderedPkgs += $pkgs | Where-Object {
+            $_.PackageFamilyName -and
+            $_.PackageFamilyName -ne "Microsoft.WindowsTerminal_8wekyb3d8bbwe" -and
+            $_.PackageFamilyName -ne "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe"
+        } | Sort-Object -Property PackageFamilyName
+
+        foreach ($pkg in $orderedPkgs) {
             if (-not $pkg.PackageFamilyName) { continue }
-            $candidates.Add((Join-Path $env:LOCALAPPDATA ("Packages\{0}\LocalState\settings.json" -f $pkg.PackageFamilyName)))
+            Add-CandidatePath (Join-Path $env:LOCALAPPDATA ("Packages\{0}\LocalState\settings.json" -f $pkg.PackageFamilyName))
         }
     } catch {
         # ignore (e.g., Get-AppxPackage unavailable)
     }
 
-    # 2) Common stable family names (fallback)
-    $knownFamilies = @(
-        "Microsoft.WindowsTerminal_8wekyb3d8bbwe",
-        "Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe"
-    )
-    foreach ($family in $knownFamilies) {
-        $candidates.Add((Join-Path $env:LOCALAPPDATA ("Packages\{0}\LocalState\settings.json" -f $family)))
-    }
-
-    # 3) Unpackaged/fallback location (sometimes used by non-Store installs)
-    $candidates.Add((Join-Path $env:LOCALAPPDATA "Microsoft\Windows Terminal\settings.json"))
+    # Unpackaged/fallback location (sometimes used by non-Store installs: Scoop, Chocolatey, etc.).
+    Add-CandidatePath (Join-Path $env:LOCALAPPDATA "Microsoft\Windows Terminal\settings.json")
 
     foreach ($p in $candidates) {
         if (Test-Path -LiteralPath $p) { return (Resolve-Path -LiteralPath $p).Path }
@@ -55,14 +67,6 @@ function Resolve-WindowsTerminalSettingsPath {
 
     throw "Could not locate Windows Terminal settings.json under LOCALAPPDATA. Provide -SettingsPath explicitly."
 }
-
-# The path for your Windows Terminal settings.json file may be found in one of the following directories:
-# Terminal (stable / general release): %LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
-# Terminal (preview release): %LOCALAPPDATA%\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json
-# Terminal (unpackaged: Scoop, Chocolatey, etc): %LOCALAPPDATA%\Microsoft\Windows Terminal\settings.json
-
-# ^ Need to check if the function Resolve-WindowsTerminalSettingsPath takes under consideration that informations (if not then it needs to be refactored)
-
 
 # search through the JSON configurations for existing profiles (name + executable)
 function Get-ExistingTerminalProfiles {

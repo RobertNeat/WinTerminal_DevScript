@@ -71,22 +71,22 @@ function print_initial_info {
 }
 
 # deklaracja funkcji ustawiającej konfigurację terminala windows dla poszczególnych powłok
-#Import-Module ".\powershell_config_setters\set_terminal_configuration_profiles.psm1"
+Import-Module ".\powershell_config_setters\set_terminal_configuration_profiles.psm1"
 
 # deklaracja funkcji ustawiającej oh my posh dla powershella
-#Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
+Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 
 # deklaracja funkcji ustawiającej motywy dla powłoki powershell (profil powershella)
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
-    print_initial_info
-    check_java_compiler
-    check_python_interpreter
-    check_node_runtime
-    check_git
+    #print_initial_info
+    #check_java_compiler
+    #check_python_interpreter
+    #check_node_runtime
+    #check_git
 
-    #Resolve-WindowsTerminalSettingsPath
+    Resolve-WindowsTerminalSettingsPath
 
     #set_oh_my_posh_for_powershell
 }
