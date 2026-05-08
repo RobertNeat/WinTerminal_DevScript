@@ -102,7 +102,8 @@ try {
 
     $terminal_settings_path = Resolve-WindowsTerminalSettingsPath
     $conf = Get-ExistingTerminalConfiguration -settingsPath $terminal_settings_path -JsonDepth 10
-    Write-Output $conf.settings.profiles.list
+    #Write-Output $conf.settings.profiles.list
+    Write-Output $conf
 
     #Write-Output $conf.settings.profiles.list
     #set_oh_my_posh_for_powershell
@@ -110,7 +111,8 @@ try {
     Write-Output "---------------------------------------"
 
     $updatedConf = Update-TerminalProfiles -ExecutablesMap $executables_map -SettingsPath $terminal_settings_path
-    Write-Output $updatedConf.settings.profiles.list
+    #Write-Output $updatedConf.settings.profiles.list
+    Write-Output $updatedConf
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"

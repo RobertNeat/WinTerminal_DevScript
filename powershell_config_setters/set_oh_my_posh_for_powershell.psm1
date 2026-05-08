@@ -26,3 +26,6 @@
 
 
 # needs to run after setting terminal settings
+
+
+#???[add or not to add IDK] https://learn.microsoft.com/en-us/windows/terminal/tutorials/custom-prompt-setup

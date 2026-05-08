@@ -71,7 +71,6 @@ function Resolve-WindowsTerminalSettingsPath {
 # [input-param] SettingsPath: resolved path to settings.json
 # [output-param] TerminalVersion: detected WT version string
 # [output-param] JsonDepth: the depth used for ConvertTo-Json (PowerShell 5’s max is 100)
-# [output-param] RawJson: the original file content (string) — mainly for diagnostics
 # [output-param] Settings: the actual parsed JSON as a nested PSCustomObject tree — this is what you should edit
 function Get-ExistingTerminalConfiguration {
     [CmdletBinding()]
@@ -109,7 +108,6 @@ function Get-ExistingTerminalConfiguration {
         TerminalVersion = $terminalVersion.ToString()
         JsonDepth       = $JsonDepth
         Settings        = $settingsObject
-        RawJson         = $rawJson
     }
 
     if (-not $SkipRoundTripValidation) {
@@ -553,6 +551,7 @@ function Update-TerminalColorSchemes {
 # [add to each profile in the list if windows_terminal version is above v1.21]:         
 # "showMarksOnScrollbar": true, 
 # "autoMarkPrompts": true
+# [add to powershell commandline property] "commandline": "... -NoLogo"
 <#
   "profiles": {
     "list": [
