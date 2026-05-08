@@ -129,6 +129,12 @@ try {
 
     Write-Output "@-- After:"
     Write-Output $updatedConfa.settings   | Format-List
+
+    Write-Output "---------------------------------------"
+
+    $config_with_color_schema = Update-TerminalColorSchemes -Configuration $updatedConfa
+    Write-Output "@-- With color schemes:"
+    Write-Output $config_with_color_schema.settings.schemes   | Format-List
     
 }
 catch {

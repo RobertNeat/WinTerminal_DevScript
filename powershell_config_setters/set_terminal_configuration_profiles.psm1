@@ -1,3 +1,4 @@
+Import-Module ".\powershell_config_setters\color_schemes.psm1"
 
 # get windows terminal JSON configuration file path
 function Resolve-WindowsTerminalSettingsPath {
@@ -606,9 +607,82 @@ function Disable-AutomaticProfileGeneration {
 # - define additional color schemes for each profile (git bash, node, python)
 # - add color schemes reference to each profile (git bash, node, python)
 function Update-TerminalColorSchemes {
+    [CmdletBinding()]
     param(
         [PSCustomObject] $Configuration
     )
+
+    if (-not $Configuration) { throw 'Configuration is required (pass the object from Get-ExistingTerminalConfiguration).' }
+
+    # # Load local color scheme provider if available
+    # try {
+    #     if ($PSScriptRoot) {
+    #         $csPath = Join-Path $PSScriptRoot 'color_schemes.psm1'
+    #         if (Test-Path -LiteralPath $csPath) { . $csPath }
+    #     }
+    # } catch {
+    #     # continue; fall back to any installed module
+    # }
+
+    if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {
+        try { Import-Module -Name color_schemes -ErrorAction SilentlyContinue } catch {}
+    }
+
+    if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {
+        throw 'Get-TerminalColorSchemes function not found. Ensure color_schemes.psm1 is present.'
+    }
+
+    $newSchemes = Get-TerminalColorSchemes
+
+    # Operate on Settings property when the wrapper is passed.
+    $settingsJson = $Configuration
+    if ($Configuration -and ($Configuration.PSObject.Properties.Name -contains 'Settings') -and $Configuration.Settings) {
+        $settingsJson = $Configuration.Settings
+    }
+    if (-not $settingsJson) { throw 'Configuration.Settings is null (cannot update color schemes).' }
+
+    # Some exports wrap the real WT schema in a nested .settings object; support both.
+    $settingsRoot = $settingsJson
+    if (($settingsJson.PSObject.Properties.Name -contains 'settings') -and $settingsJson.settings) {
+        $settingsRoot = $settingsJson.settings
+    }
+
+    function Ensure-NotePropertyLocal {
+        param(
+            [Parameter(Mandatory = $true)][psobject]$Object,
+            [Parameter(Mandatory = $true)][string]$Name,
+            [Parameter(Mandatory = $true)]$DefaultValue
+        )
+
+        if (-not ($Object.PSObject.Properties.Name -contains $Name)) {
+            $Object | Add-Member -MemberType NoteProperty -Name $Name -Value $DefaultValue -Force
+        } elseif ($null -eq $Object.$Name) {
+            $Object.$Name = $DefaultValue
+        }
+    }
+
+    Ensure-NotePropertyLocal -Object $settingsRoot -Name 'schemes' -DefaultValue @()
+
+    $existing = @($settingsRoot.schemes)
+    $merged = New-Object System.Collections.ArrayList
+
+    foreach ($s in $existing) { [void]$merged.Add($s) }
+
+    foreach ($ns in $newSchemes) {
+        $found = $false
+        for ($i = 0; $i -lt $merged.Count; $i++) {
+            if (([string]$merged[$i].name) -ieq ([string]$ns.name)) {
+                $merged[$i] = $ns
+                $found = $true
+                break
+            }
+        }
+        if (-not $found) { [void]$merged.Add($ns) }
+    }
+
+    $settingsRoot.schemes = @($merged)
+
+    return $Configuration
 }
 
 # [add to each profile in the list if windows_terminal version is above v1.21]:         
@@ -624,6 +698,7 @@ function Update-TerminalColorSchemes {
       }
     ]}
 #>
+# [add to each terminal profile the color scheme]
 function Update-TerminalProfileAddtionalSettings {
     param(
         [PSCustomObject] $Configuration,
@@ -663,4 +738,9 @@ function Apply-TerminalConfiguration {
 
 # https://github.com/microsoft/terminal
 
-Export-ModuleMember -Function Resolve-WindowsTerminalSettingsPath, Get-ExistingTerminalConfiguration, Test-TerminalConfigurationRoundTrip, Update-TerminalProfiles, Disable-AutomaticProfileGeneration
+Export-ModuleMember -Function Resolve-WindowsTerminalSettingsPath, 
+Get-ExistingTerminalConfiguration,
+Test-TerminalConfigurationRoundTrip,
+Update-TerminalProfiles,
+Disable-AutomaticProfileGeneration,
+Update-TerminalColorSchemes
