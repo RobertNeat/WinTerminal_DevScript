@@ -103,16 +103,33 @@ try {
     $terminal_settings_path = Resolve-WindowsTerminalSettingsPath
     $conf = Get-ExistingTerminalConfiguration -settingsPath $terminal_settings_path -JsonDepth 10
     #Write-Output $conf.settings.profiles.list
-    Write-Output $conf
+    Write-Output $conf | Format-List
 
     #Write-Output $conf.settings.profiles.list
     #set_oh_my_posh_for_powershell
 
+    
     Write-Output "---------------------------------------"
 
     $updatedConf = Update-TerminalProfiles -ExecutablesMap $executables_map -SettingsPath $terminal_settings_path
+
     #Write-Output $updatedConf.settings.profiles.list
-    Write-Output $updatedConf
+    Write-Output $updatedConf   | Format-List
+
+    Write-Output "---------------------------------------"
+
+    
+    Write-Output "@-- Before:"
+    Write-Output $updatedConf.settings   | Format-List
+
+    $updatedConfa = Disable-AutomaticProfileGeneration -ProfileSourceToDisable @(
+        "Windows.Terminal.Azure",
+        "Windows.Terminal.SSH"
+    ) -SettingsObject $updatedConf
+
+    Write-Output "@-- After:"
+    Write-Output $updatedConfa.settings   | Format-List
+    
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
