@@ -308,64 +308,220 @@ function Test-DeepObjectEqual {
     return ($Left -eq $Right)
 }
 
-# getter for default terminal profiles (Windows Powershell, Command Prompt, Windows.Terminal.Azure)
-function Extract-TerminalProfiles-asObject{
-
-}
-
 # manipulate JSON entries:
 # - delete the entries that are not CMD, PowerShell
 # - add entries for git bash, node, python (if not already present)
 # - customize icons, names, color schemes for the entries
 function Update-TerminalProfiles {
+    [CmdletBinding()]
     param(
-        [hashtable] $ExecutablesMap,            # input: list of executables to add (git bash, node, python) aka. ExecutablesMap
-        [PSCustomObject]@{}] $settingsObject   # input: settingsObject (parsed JSON as PS object)
-        # output: modified settingsObject with updated profiles list (added/modified entries for git bash, node, python; removed entries that are not CMD, PowerShell)
+        # input: list of executables to add (git bash, node, python)
+        # expected keys: git, node, python
+        [Parameter(Mandatory = $true)]
+        [hashtable] $ExecutablesMap,
+
+        # input: either
+        # - the object returned by Get-ExistingTerminalConfiguration (has .Settings), OR
+        # - the parsed settings.json object returned by ConvertFrom-Json.
+        # If omitted, this function will load settings.json automatically.
+        [Parameter(Mandatory = $false)]
+        [object] $SettingsObject,
+
+        [Parameter(Mandatory = $false)]
+        [string] $SettingsPath,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(2, 100)]
+        [int] $JsonDepth = 100
     )
 
-    # to get list of profiles invoke:
-    # $settingsObject.settings.profiles.list
+    function Ensure-NoteProperty {
+        param(
+            [Parameter(Mandatory = $true)][psobject]$Object,
+            [Parameter(Mandatory = $true)][string]$Name,
+            [Parameter(Mandatory = $true)]$DefaultValue
+        )
 
-    <#
-                {
-                "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-                "experimental.repositionCursorWithMouse": true,
-                "font": 
-                {
-                    "face": "Cascadia Code"
-                },
-                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
-                "hidden": false,
-                "name": "Windows PowerShell"
-            },
-            {
-                "commandline": "%SystemRoot%\\System32\\cmd.exe",
-                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
-                "hidden": false,
-                "name": "Command Prompt"
-            },
-            {
-                "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
-                "hidden": false,
-                "name": "Azure Cloud Shell",
-                "source": "Windows.Terminal.Azure"
+        if (-not ($Object.PSObject.Properties.Name -contains $Name)) {
+            $Object | Add-Member -MemberType NoteProperty -Name $Name -Value $DefaultValue -Force
+        } elseif ($null -eq $Object.$Name) {
+            $Object.$Name = $DefaultValue
+        }
+    }
+
+    function Get-ExecutableToken {
+        param([string]$CommandLine)
+
+        if ([string]::IsNullOrWhiteSpace($CommandLine)) { return $null }
+        $s = $CommandLine.Trim()
+        if ($s.StartsWith('"')) {
+            $m = [regex]::Match($s, '^[\"]([^\"]+)[\"]')
+            if ($m.Success) { return $m.Groups[1].Value }
+        }
+        $m2 = [regex]::Match($s, '^(\S+)')
+        if ($m2.Success) { return $m2.Groups[1].Value }
+        return $null
+    }
+
+    function Test-IsCmdProfile {
+        param([psobject]$Profile)
+        if (-not $Profile) { return $false }
+
+        $name = [string]$Profile.name
+        $cmd = [string]$Profile.commandline
+        if ($name -and ($name -match '(?i)\bCommand\s+Prompt\b')) { return $true }
+
+        $exe = Get-ExecutableToken -CommandLine $cmd
+        if ($exe) {
+            $leaf = [System.IO.Path]::GetFileName($exe)
+            if ($leaf -and ($leaf -ieq 'cmd.exe' -or $leaf -ieq 'cmd')) { return $true }
+        }
+
+        return ($cmd -match '(?i)(^|\\|\s)cmd(\.exe)?(\s|$)')
+    }
+
+    function Test-IsWindowsPowerShellProfile {
+        param([psobject]$Profile)
+        if (-not $Profile) { return $false }
+
+        $name = [string]$Profile.name
+        $cmd = [string]$Profile.commandline
+        if ($name -and ($name -match '(?i)\bWindows\s+PowerShell\b')) { return $true }
+
+        $exe = Get-ExecutableToken -CommandLine $cmd
+        if ($exe) {
+            $leaf = [System.IO.Path]::GetFileName($exe)
+            if ($leaf -and ($leaf -ieq 'powershell.exe' -or $leaf -ieq 'powershell')) { return $true }
+        }
+
+        return ($cmd -match '(?i)(^|\\|\s)powershell(\.exe)?(\s|$)')
+    }
+
+    function Resolve-ExecutablePath {
+        param(
+            [string]$Candidate,
+            [string[]]$FallbackRelativePaths
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Candidate)) { return $null }
+        $c = $Candidate.Trim().Trim('"')
+
+        try {
+            if (Test-Path -LiteralPath $c) {
+                $item = Get-Item -LiteralPath $c -ErrorAction SilentlyContinue
+                if ($item -and -not $item.PSIsContainer) {
+                    return $item.FullName
+                }
+                if ($item -and $item.PSIsContainer) {
+                    foreach ($rel in $FallbackRelativePaths) {
+                        $p = Join-Path $item.FullName $rel
+                        if (Test-Path -LiteralPath $p) { return (Resolve-Path -LiteralPath $p).Path }
+                    }
+                }
             }
+        } catch {
+            return $null
+        }
 
+        return $null
+    }
 
-            {
-    "name": "Git Bash",
-    "commandline": "C:\\Program Files\\Git\\bin\\bash.exe -li",
-    "icon": "C:\\Program Files\\Git\\mingw64\\share\\git\\git-for-windows.ico",
-    "startingDirectory": "%USERPROFILE%"
-}
+    function Upsert-ProfileByName {
+        param(
+            [Parameter(Mandatory = $true)][System.Collections.IList]$Profiles,
+            [Parameter(Mandatory = $true)][string]$Name,
+            [Parameter(Mandatory = $true)][string]$CommandLine
+        )
 
+        for ($i = 0; $i -lt $Profiles.Count; $i++) {
+            $p = $Profiles[$i]
+            if ($p -and ([string]$p.name) -and (([string]$p.name) -ieq $Name)) {
+                $p.commandline = $CommandLine
+                if ($p.PSObject.Properties.Name -contains 'hidden') { $p.hidden = $false }
+                else { $p | Add-Member -MemberType NoteProperty -Name 'hidden' -Value $false -Force }
+                return
+            }
+        }
 
-    #>
+        [void]$Profiles.Add([pscustomobject]@{ name = $Name; commandline = $CommandLine; hidden = $false })
+    }
 
+    # If not provided, load existing configuration so we still operate on an object in memory.
+    if (-not $SettingsObject) {
+        if (-not $SettingsPath) { $SettingsPath = Resolve-WindowsTerminalSettingsPath }
+        $SettingsObject = Get-ExistingTerminalConfiguration -SettingsPath $SettingsPath -JsonDepth $JsonDepth
+    }
 
-    # temporary inspect if the settingsObject is correctly passed and can be manipulated
-    return $ExecutablesMap
+    # Operate on Settings property when the wrapper is passed.
+    $settingsJson = $SettingsObject
+    if ($SettingsObject -and ($SettingsObject.PSObject.Properties.Name -contains 'Settings')) {
+        $settingsJson = $SettingsObject.Settings
+    }
+    if (-not $settingsJson) { throw 'SettingsObject is null (cannot update profiles).' }
+
+    # Some exports wrap the real WT schema in a nested .settings object; support both.
+    $settingsRoot = $settingsJson
+    if (($settingsJson.PSObject.Properties.Name -contains 'settings') -and $settingsJson.settings) {
+        $settingsRoot = $settingsJson.settings
+    }
+
+    Ensure-NoteProperty -Object $settingsRoot -Name 'profiles' -DefaultValue ([pscustomobject]@{})
+    Ensure-NoteProperty -Object $settingsRoot.profiles -Name 'list' -DefaultValue @()
+
+    $existing = @($settingsRoot.profiles.list)
+
+    # Step 1: keep only CMD + Windows PowerShell profiles
+    $kept = New-Object System.Collections.ArrayList
+    foreach ($p in $existing) {
+        if ((Test-IsCmdProfile -Profile $p) -or (Test-IsWindowsPowerShellProfile -Profile $p)) {
+            [void]$kept.Add($p)
+        }
+    }
+
+    # Ensure at least one CMD and one Windows PowerShell profile exist.
+    $hasCmd = $false
+    $hasWinPS = $false
+    foreach ($p in @($kept)) {
+        if (-not $hasCmd -and (Test-IsCmdProfile -Profile $p)) { $hasCmd = $true }
+        if (-not $hasWinPS -and (Test-IsWindowsPowerShellProfile -Profile $p)) { $hasWinPS = $true }
+    }
+    if (-not $hasWinPS) { [void]$kept.Add([pscustomobject]@{ name = 'Windows PowerShell'; commandline = 'powershell.exe'; hidden = $false }) }
+    if (-not $hasCmd) { [void]$kept.Add([pscustomobject]@{ name = 'Command Prompt'; commandline = 'cmd.exe'; hidden = $false }) }
+
+    # Step 2: add Git Bash / Node / Python (only when the executable exists)
+
+    $gitExe = Resolve-ExecutablePath -Candidate ([string]$ExecutablesMap['git']) -FallbackRelativePaths @(
+        'usr\bin\bash.exe',
+        'bin\bash.exe',
+        'mingw64\bin\bash.exe',
+        'git-bash.exe'
+    )
+    if ($gitExe) {
+        $leaf = Split-Path -Path $gitExe -Leaf
+        $gitCmd = if ($leaf -and ($leaf -ieq 'bash.exe')) { '"{0}" --login -i' -f $gitExe } else { '"{0}"' -f $gitExe }
+        Upsert-ProfileByName -Profiles $kept -Name 'Git Bash' -CommandLine $gitCmd
+    } else {
+        Write-Verbose "Git Bash not added (path missing or not found)."
+    }
+
+    $nodeExe = Resolve-ExecutablePath -Candidate ([string]$ExecutablesMap['node']) -FallbackRelativePaths @('node.exe')
+    if ($nodeExe) {
+        Upsert-ProfileByName -Profiles $kept -Name 'Node' -CommandLine ('"{0}"' -f $nodeExe)
+    } else {
+        Write-Verbose "Node profile not added (path missing or not found)."
+    }
+
+    $pythonExe = Resolve-ExecutablePath -Candidate ([string]$ExecutablesMap['python']) -FallbackRelativePaths @('python.exe', 'python3.exe')
+    if ($pythonExe) {
+        Upsert-ProfileByName -Profiles $kept -Name 'Python' -CommandLine ('"{0}"' -f $pythonExe)
+    } else {
+        Write-Verbose "Python profile not added (path missing or not found)."
+    }
+
+    # In-place update (same object instance)
+    $settingsRoot.profiles.list = @($kept)
+
+    return $SettingsObject
 }
 
 
@@ -375,7 +531,7 @@ function Update-TerminalProfiles {
 function Disable-AutomaticProfileGeneration {
     param(
         [string[]] $ProfileSourcesToDisable,    # input: list of profile sources to disable (e.g., Windows.Terminal.Azure, Windows.Terminal.SSH)
-        [PSCustomObject]@{}] $settingsObject   # input: settingsObject (parsed JSON as PS object)
+        [object] $SettingsObject                # input: configuration object (.Settings) or parsed settings.json object
         # output: modified settingsObject with updated "disabledProfileSources" entry
     )
 
@@ -409,10 +565,11 @@ function Update-TerminalColorSchemes {
 function Update-TerminalProfileAddtionalSettings {
     param(
         [PSCustomObject] $Configuration,
-        [hashtable] $ParamsMap,  # key-value map to add to each profile
+        [hashtable] $ParamsMap  # key-value map to add to each profile
     )
 
-    $windowsTerminalVersion = Configuration.TerminalVersion
+    $windowsTerminalVersion = $null
+    try { $windowsTerminalVersion = [version]$Configuration.TerminalVersion } catch { }
 
     if($windowsTerminalVersion -ge [version]'1.21') {
         # add the additional settings from ParamsMap to each profile in the profiles list
@@ -426,7 +583,7 @@ function Update-TerminalProfileAddtionalSettings {
 function Add-TerminalAdditionalSettings {
     param(
         [PSCustomObject] $Configuration,
-        [hashtable] $ParamsMap,  # key-value map to add to global object settings
+        [hashtable] $ParamsMap  # key-value map to add to global object settings
     )
 }
 
