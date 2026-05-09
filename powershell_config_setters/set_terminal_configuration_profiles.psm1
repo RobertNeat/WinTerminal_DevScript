@@ -873,8 +873,45 @@ function Add-TerminalAdditionalSettings {
 # function that overrides the settings.json with the modified configuration (after manipulation by Update-TerminalProfiles)
 function Apply-TerminalConfiguration {
     param(
-        [PSCustomObject] $Configuration
+        [PSCustomObject] $Configuration,
+        [string] $SettingsPath
     )
+    if (-not $Configuration) { throw 'Configuration is required.' }
+
+    # Resolve settings path if not provided
+    if ([string]::IsNullOrWhiteSpace($SettingsPath)) { $SettingsPath = Resolve-WindowsTerminalSettingsPath }
+    if (-not $SettingsPath) { throw 'SettingsPath could not be resolved.' }
+
+    # Prepare object for serialization. Some functions pass a wrapper with .Settings
+    $toSerialize = $Configuration
+    if ($Configuration -and ($Configuration.PSObject.Properties.Name -contains 'Settings') -and $Configuration.Settings) {
+        $toSerialize = $Configuration.Settings
+    }
+
+    # If there is an inner .settings property (some exports wrap twice), keep that shape
+    if ($toSerialize -and ($toSerialize.PSObject.Properties.Name -contains 'settings') -and $toSerialize.settings) {
+        # keep as-is (already nested)
+    }
+
+    # Choose a safe depth for ConvertTo-Json (PowerShell 5 has limits). Prefer 100 when available.
+    $depth = 100
+    try { $json = $toSerialize | ConvertTo-Json -Depth $depth -Compress -ErrorAction Stop } catch {
+        # fallback: try larger depth if ConvertTo-Json failed due to depth
+        $depth = 200
+        $json = $toSerialize | ConvertTo-Json -Depth $depth -Compress
+    }
+
+    # Write JSON back to file with UTF8 encoding (no BOM to match typical WT file). Use -Force to overwrite.
+    $tmp = [System.IO.Path]::GetTempFileName()
+    try {
+        $json | Out-File -LiteralPath $tmp -Encoding utf8 -Force
+        # Replace original atomically when possible
+        Copy-Item -LiteralPath $tmp -Destination $SettingsPath -Force
+    } finally {
+        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }
+    }
+
+    return $Configuration
 }
 
 
@@ -890,4 +927,5 @@ Update-TerminalProfiles,
 Disable-AutomaticProfileGeneration,
 Update-TerminalColorSchemes,
 Update-TerminalProfileAddtionalSettings,
-Add-TerminalAdditionalSettings
+Add-TerminalAdditionalSettings,
+Apply-TerminalConfiguration

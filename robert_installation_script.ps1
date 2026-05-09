@@ -165,6 +165,10 @@ try {
     
     Write-Output "---------------------------------------"
 
+    
+    Write-Output "@-- Write conf to JSON file:"
+    Apply-TerminalConfiguration -Configuration $settingsadditional -SettingsPath $terminal_settings_path
+
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
