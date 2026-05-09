@@ -149,8 +149,22 @@ try {
     Write-Output $finalConfig.settings.profiles.list | Format-List
 
     
-    Write-Output $finalConfig.settings.profiles | Format-List
     
+    
+    Write-Output "---------------------------------------"
+    
+    Write-Output "@-- Before (Add-TerminalAdditionalSettings):"
+
+    Write-Output $finalConfig.settings | Format-List
+    $settingsadditional = Add-TerminalAdditionalSettings -Configuration $finalConfig -ParamsMap @{tabWidthMode = "titleLength"; searchWebDefaultQueryUrl = "https://www.google.com/search?q=%22%s%22"}
+
+    Write-Output "@-- After (Add-TerminalAdditionalSettings):"
+    Write-Output $settingsadditional.settings | Format-List
+
+    
+    
+    Write-Output "---------------------------------------"
+
 }
 catch {
     #Write-Output "Error: $($_.Exception.Message)"
