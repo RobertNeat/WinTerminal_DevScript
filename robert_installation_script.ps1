@@ -135,6 +135,21 @@ try {
     $config_with_color_schema = Update-TerminalColorSchemes -Configuration $updatedConfa
     Write-Output "@-- With color schemes:"
     Write-Output $config_with_color_schema.settings.schemes   | Format-List
+
+    
+    Write-Output "---------------------------------------"
+    Write-Output "Applying additional profile settings (showMarksOnScrollbar, autoMarkPrompts, PowerShell -NoLogo)..."
+    Write-Output "@-- Profiles Before:" 
+    Write-Output $config_with_color_schema.settings.profiles.list | Format-List
+
+    $params = @{ showMarksOnScrollbar = $true; autoMarkPrompts = $true }
+    $finalConfig = Update-TerminalProfileAddtionalSettings -Configuration $config_with_color_schema -ParamsMap $params
+
+    Write-Output "@-- Profiles After:" 
+    Write-Output $finalConfig.settings.profiles.list | Format-List
+
+    
+    Write-Output $finalConfig.settings.profiles | Format-List
     
 }
 catch {
