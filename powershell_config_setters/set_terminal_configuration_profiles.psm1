@@ -895,10 +895,10 @@ function Apply-TerminalConfiguration {
 
     # Choose a safe depth for ConvertTo-Json (PowerShell 5 has limits). Prefer 100 when available.
     $depth = 100
-    try { $json = $toSerialize | ConvertTo-Json -Depth $depth -Compress -ErrorAction Stop } catch {
+    try { $json = $toSerialize | ConvertTo-Json -Depth $depth -ErrorAction Stop } catch {
         # fallback: try larger depth if ConvertTo-Json failed due to depth
         $depth = 200
-        $json = $toSerialize | ConvertTo-Json -Depth $depth -Compress
+        $json = $toSerialize | ConvertTo-Json -Depth $depth
     }
 
     # Write JSON back to file with UTF8 encoding (no BOM to match typical WT file). Use -Force to overwrite.
