@@ -1,7 +1,17 @@
-﻿<#
+﻿# Importy do uporządkowania
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1"
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1"
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfiles.psm1"
+Import-Module ".\modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1"
+Import-Module ".\modules\Terminal.Themes\Set-TerminalColorSchemes.psm1"
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1"
+Import-Module ".\modules\Terminal.IO\Add-TerminalSettings.psm1"
+Import-Module ".\modules\Terminal.Configuration\Save-TerminalConfiguration.psm1"
+
+<#
     Skrypt instalacyjny windows:
     1) sprawdza wersję systemu operacyjnego i wersję powershella
-    2) sprawdza zainstalowane kompilatory (dostępność z posiomu path), ich wersje
+    2) sprawdza zainstalowane kompilatory (dostępność z poziomu path), ich wersje
         - java (instalacja zwykła java lub adoption java)
         - python (instalacja zwykła python lub python version manager)
         - node (instalacja zwykła node lub nvm)
@@ -71,12 +81,14 @@ function print_initial_info {
 }
 
 # deklaracja funkcji ustawiającej konfigurację terminala windows dla poszczególnych powłok
-Import-Module ".\powershell_config_setters\set_terminal_configuration_profiles.psm1"
+<# DODAC IMPORTY#>
 
 # deklaracja funkcji ustawiającej oh my posh dla powershella
 Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 
 # deklaracja funkcji ustawiającej motywy dla powłoki powershell (profil powershella)
+<# Do implementacji -- profil powershell wowołuje polecenia zawsze przy starcie#>
+<# trzeba: ustawić oh-my-posh żeby było zaaplikowane, informacje tj. neofetch w linuks#>
 
 # główne wywołanie poszcególnych funkcji (main execution flow)
 try {
@@ -97,11 +109,11 @@ try {
         node   = $node.NodeHome
     }
 
-    #$check = Update-TerminalProfiles -ExecutablesMap $executables_map
+    #$check = Set-TerminalProfiles -ExecutablesMap $executables_map
     #Write-Output $check
 
-    $terminal_settings_path = Resolve-WindowsTerminalSettingsPath
-    $conf = Get-ExistingTerminalConfiguration -settingsPath $terminal_settings_path -JsonDepth 10
+    $terminal_settings_path = Get-TerminalSettingsPath
+    $conf = Get-TerminalConfiguration -settingsPath $terminal_settings_path -JsonDepth 10
     #Write-Output $conf.settings.profiles.list
     Write-Output $conf | Format-List
 
@@ -111,7 +123,7 @@ try {
     
     Write-Output "---------------------------------------"
 
-    $updatedConf = Update-TerminalProfiles -ExecutablesMap $executables_map -SettingsPath $terminal_settings_path
+    $updatedConf = Set-TerminalProfiles -ExecutablesMap $executables_map -SettingsPath $terminal_settings_path
 
     #Write-Output $updatedConf.settings.profiles.list
     Write-Output $updatedConf   | Format-List
@@ -122,7 +134,7 @@ try {
     Write-Output "@-- Before:"
     Write-Output $updatedConf.settings   | Format-List
 
-    $updatedConfa = Disable-AutomaticProfileGeneration -ProfileSourceToDisable @(
+    $updatedConfa = Disable-TerminalDynamicProfiles -ProfileSourceToDisable @(
         "Windows.Terminal.Azure",
         "Windows.Terminal.SSH"
     ) -SettingsObject $updatedConf
@@ -132,7 +144,7 @@ try {
 
     Write-Output "---------------------------------------"
 
-    $config_with_color_schema = Update-TerminalColorSchemes -Configuration $updatedConfa
+    $config_with_color_schema = Set-TerminalColorSchemes -Configuration $updatedConfa
     Write-Output "@-- With color schemes:"
     Write-Output $config_with_color_schema.settings.schemes   | Format-List
 
@@ -143,7 +155,7 @@ try {
     Write-Output $config_with_color_schema.settings.profiles.list | Format-List
 
     $params = @{ showMarksOnScrollbar = $true; autoMarkPrompts = $true }
-    $finalConfig = Update-TerminalProfileAddtionalSettings -Configuration $config_with_color_schema -ParamsMap $params
+    $finalConfig = Set-TerminalProfileAdditionalSettings -Configuration $config_with_color_schema -ParamsMap $params
 
     Write-Output "@-- Profiles After:" 
     Write-Output $finalConfig.settings.profiles.list | Format-List
@@ -153,12 +165,12 @@ try {
     
     Write-Output "---------------------------------------"
     
-    Write-Output "@-- Before (Add-TerminalAdditionalSettings):"
+    Write-Output "@-- Before (Add-TerminalSettings):"
 
     Write-Output $finalConfig.settings | Format-List
-    $settingsadditional = Add-TerminalAdditionalSettings -Configuration $finalConfig -ParamsMap @{tabWidthMode = "titleLength"; searchWebDefaultQueryUrl = "https://www.google.com/search?q=%22%s%22"}
+    $settingsadditional = Add-TerminalSettings -Configuration $finalConfig -ParamsMap @{tabWidthMode = "titleLength"; searchWebDefaultQueryUrl = "https://www.google.com/search?q=%22%s%22"}
 
-    Write-Output "@-- After (Add-TerminalAdditionalSettings):"
+    Write-Output "@-- After (Add-TerminalSettings):"
     Write-Output $settingsadditional.settings | Format-List
 
     
@@ -167,7 +179,7 @@ try {
 
     
     Write-Output "@-- Write conf to JSON file:"
-    Apply-TerminalConfiguration -Configuration $settingsadditional -SettingsPath $terminal_settings_path
+    Save-TerminalConfiguration -Configuration $settingsadditional -SettingsPath $terminal_settings_path
 
 }
 catch {
