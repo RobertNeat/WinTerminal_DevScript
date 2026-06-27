@@ -1,4 +1,4 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1"
+Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
 
 # Disables the specified Windows Terminal dynamic profile sources.
 # [input-param] ProfileSourcesToDisable: list of profile source identifiers to write into disabledProfileSources

@@ -1,5 +1,5 @@
-Import-Module ".\modules\Utils\Get-ExecutableToken.psm1"
-Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1"
+Import-Module ".\modules\Utils\Get-ExecutableToken.psm1" -ErrorAction Stop
+Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
 
 <#
   "profiles": {

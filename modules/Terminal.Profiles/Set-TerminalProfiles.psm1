@@ -1,10 +1,9 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1"
-Import-Module ".\modules\Terminal.Configuration\Resolve-FilePath.psm1"
-Import-Module ".\modules\Terminal.Profiles\Update-Profile.psm1"
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1"
-
-Import-Module ".\modules\_Tests\Test-CmdProfile.psm1"
-Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1"
+Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Configuration\Resolve-FilePath.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Update-Profile.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1" -ErrorAction Stop
+Import-Module ".\modules\_Tests\Test-CmdProfile.psm1" -ErrorAction Stop
+Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
 
 # Normalizes the Windows Terminal profile list and adds developer tool profiles.
 # [input-param] ExecutablesMap: map of executable paths; supported keys are git, node, and python

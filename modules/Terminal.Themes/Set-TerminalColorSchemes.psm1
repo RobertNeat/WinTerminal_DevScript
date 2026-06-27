@@ -1,5 +1,5 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1"
-Import-Module ".\modules\Terminal.Themes\Get-TerminalColorSchemes.psm1"
+Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Themes\Get-TerminalColorSchemes.psm1" -ErrorAction Stop
 
 # Adds or updates built-in Windows Terminal color schemes.
 # [input-param] Configuration: configuration object or wrapper containing the Settings property
@@ -24,7 +24,7 @@ function Set-TerminalColorSchemes {
     # }
 
     if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {
-        try { Import-Module -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue } catch {}
+        try { Import-Module -Name Get-TerminalColorSchemes -ErrorAction Stop } catch {}
     }
 
     if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {

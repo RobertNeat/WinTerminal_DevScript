@@ -1,12 +1,12 @@
 ﻿# Importy do uporządkowania
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1"
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1"
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfiles.psm1"
-Import-Module ".\modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1"
-Import-Module ".\modules\Terminal.Themes\Set-TerminalColorSchemes.psm1"
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1"
-Import-Module ".\modules\Terminal.IO\Add-TerminalSettings.psm1"
-Import-Module ".\modules\Terminal.Configuration\Save-TerminalConfiguration.psm1"
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfiles.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.Themes\Set-TerminalColorSchemes.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.IO\Add-TerminalSettings.psm1"  -ErrorAction Stop
+Import-Module ".\modules\Terminal.Configuration\Save-TerminalConfiguration.psm1"  -ErrorAction Stop
 
 <#
     Skrypt instalacyjny windows:

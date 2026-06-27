@@ -1,4 +1,4 @@
-Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
+Import-Module ".\powershell_compiler_checkers\search_system_for_compiler" -ErrorAction Stop
 
 # Checks the Git for Windows installation and related tool configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, LatestVersion, UpdateAvailable, WingetAvailable, GitHome, BashHome, Manager, GitExecPath, GitSsh, GitSshCommand, GitAskPass, and Errors fields

@@ -1,4 +1,4 @@
-Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
+Import-Module ".\powershell_compiler_checkers\search_system_for_compiler" -ErrorAction Stop
 
 # Checks the Python interpreter installation and pyenv-win configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, PythonHome, and Errors fields

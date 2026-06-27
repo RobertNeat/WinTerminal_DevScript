@@ -1,7 +1,7 @@
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1"
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1" -ErrorAction Stop
 
-Import-Module ".\modules\_Tests\Test-TerminalMinimumVersion.psm1"
-Import-Module ".\modules\_Tests\Test-TerminalConfigurationSerialization.psm1"
+Import-Module ".\modules\_Tests\Test-TerminalMinimumVersion.psm1" -ErrorAction Stop
+Import-Module ".\modules\_Tests\Test-TerminalConfigurationSerialization.psm1" -ErrorAction Stop
 
 
 # Gets the Windows Terminal configuration from settings.json.

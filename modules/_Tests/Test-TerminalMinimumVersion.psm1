@@ -1,4 +1,4 @@
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalVersion.psm1"
+Import-Module ".\modules\Terminal.Configuration\Get-TerminalVersion.psm1" -ErrorAction Stop
 
 # Checks whether the installed Windows Terminal meets the minimum version.
 # [input-param] MinimumVersion: minimum required Windows Terminal version

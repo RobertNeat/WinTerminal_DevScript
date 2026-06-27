@@ -1,5 +1,5 @@
-Import-Module ".\modules\terminal.configuration\Get-TerminalSettingsPath.psm1"
-Import-Module ".\modules\_Tests\Test-ObjectEqualityDeep.psm1"
+Import-Module ".\modules\terminal.configuration\Get-TerminalSettingsPath.psm1" -ErrorAction Stop
+Import-Module ".\modules\_Tests\Test-ObjectEqualityDeep.psm1" -ErrorAction Stop
 
 # Checks whether the Windows Terminal configuration survives JSON serialization without losing structure.
 # [input-param] Configuration: configuration object or wrapper containing Settings and optionally SettingsPath
