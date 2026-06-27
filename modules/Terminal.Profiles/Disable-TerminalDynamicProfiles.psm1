@@ -1,8 +1,10 @@
 Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1"
 
-# additional functions:
-# - disable automatic profile generation (to prevent regenerating deleted profiles):
-# "disabledProfileSources": ["Windows.Terminal.Azure", "Windows.Terminal.SSH"]
+# Disables the specified Windows Terminal dynamic profile sources.
+# [input-param] ProfileSourcesToDisable: list of profile source identifiers to write into disabledProfileSources
+# [input-param] SettingsObject: object from Get-TerminalConfiguration or parsed settings.json
+# [output-param] object: the same SettingsObject after modification
+# [side-effect] Modifies the disabledProfileSources property in memory, merging values without duplicates.
 function Disable-TerminalDynamicProfiles {
     [CmdletBinding()]
     param(

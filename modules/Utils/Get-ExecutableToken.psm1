@@ -1,3 +1,6 @@
+# Extracts the first executable token from a command line.
+# [input-param] CommandLine: commandline text, optionally with quotes around the program path
+# [output-param] string|null: path or program name from the beginning of the command; null when it cannot be read
 function Get-ExecutableToken {
     param([string]$CommandLine)
 

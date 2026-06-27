@@ -1,10 +1,6 @@
 Import-Module ".\modules\Utils\Get-ExecutableToken.psm1"
 Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1"
 
-# [add to each profile in the list if windows_terminal version is above v1.21]:         
-# "showMarksOnScrollbar": true, 
-# "autoMarkPrompts": true
-# [add to powershell commandline property] "commandline": "... -NoLogo"
 <#
   "profiles": {
     "list": [
@@ -14,8 +10,11 @@ Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1"
       }
     ]}
 #>
-# - add each added color scheme by name (if normalized name matches the profile name ex. "PowerShell Fluent" matches powershell or power shell etc.)
-# if not possible to match by name then unicqually match applay the profiles accordingly (if not enough color schemes then write-output then try to math around to minimize repetition)
+# Extends profiles with additional settings and matched color schemes.
+# [input-param] Configuration: configuration object or wrapper containing Settings and TerminalVersion
+# [input-param] ParamsMap: map of settings added to each profile; defaults to showMarksOnScrollbar and autoMarkPrompts
+# [output-param] PSCustomObject|null: the same Configuration object for Windows Terminal >= 1.21; null for older versions
+# [side-effect] Modifies profiles.list in memory, adding missing profile settings, colorScheme, and -NoLogo for Windows PowerShell.
 function Set-TerminalProfileAdditionalSettings {
     param(
         [PSCustomObject] $Configuration,

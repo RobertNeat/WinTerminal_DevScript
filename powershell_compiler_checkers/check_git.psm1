@@ -1,5 +1,8 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
 
+# Checks the Git for Windows installation and related tool configuration.
+# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, LatestVersion, UpdateAvailable, WingetAvailable, GitHome, BashHome, Manager, GitExecPath, GitSsh, GitSshCommand, GitAskPass, and Errors fields
+# [side-effect] Runs git and winget, reads environment variables, and searches common installation directories.
 function check_git {
 	$result = [PSCustomObject]@{
 		Name            = "Git"
@@ -19,6 +22,10 @@ function check_git {
 		Errors          = (New-Object System.Collections.Generic.List[string])
 	}
 
+	# Determines Git installation base directories from the git.exe path.
+	# [input-param] GitExePath: full path to git.exe
+	# [output-param] string[]: unique candidate directories where Git files may be located
+	# [side-effect] Runs git --exec-path for the provided path.
 	function Get-GitCandidateRoots {
 		param(
 			[Parameter(Mandatory = $true)][string]$GitExePath
@@ -26,6 +33,9 @@ function check_git {
 
 		$roots = New-Object System.Collections.Generic.List[string]
 
+		# Adds a unique Git base directory to the local result list.
+		# [input-param] Path: directory path to normalize and add
+		# [side-effect] Modifies the parent function's local roots list.
 		function Add-Root {
 			param([string]$Path)
 			if (-not $Path) { return }
@@ -65,6 +75,10 @@ function check_git {
 		return $roots.ToArray()
 	}
 
+	# Finds bash.exe or git-bash.exe for the detected Git installation.
+	# [input-param] GitExePath: full path to git.exe
+	# [output-param] string|null: path to bash.exe/git-bash.exe, or null when not found
+	# [side-effect] Checks file existence in Git installation directories.
 	function Find-GitBashLauncher {
 		param(
 			[Parameter(Mandatory = $true)][string]$GitExePath
@@ -94,6 +108,10 @@ function check_git {
 		return $null
 	}
 
+	# Gets an environment variable value from Machine, User, or the current process.
+	# [input-param] Name: environment variable name
+	# [output-param] string|null: first found variable value
+	# [side-effect] Reads system and user environment variables.
 	function Get-EnvVarValue {
 		param(
 			[Parameter(Mandatory = $true)][string]$Name
@@ -109,12 +127,19 @@ function check_git {
 		return $value
 	}
 
+	# Normalizes a directory path string for comparisons.
+	# [input-param] Path: directory path
+	# [output-param] string|null: path without trailing separators, or null for an empty value
 	function Normalize-Dir {
 		param([string]$Path)
 		if (-not $Path) { return $null }
 		return ($Path.Trim().TrimEnd('\\'))
 	}
 
+	# Checks whether a PATH variable contains the specified directory.
+	# [input-param] PathVariableValue: semicolon-separated PATH variable value
+	# [input-param] Directory: directory expected in PATH
+	# [output-param] bool: true when Directory appears in PathVariableValue
 	function Test-PathContainsDirectory {
 		param(
 			[string]$PathVariableValue,
@@ -135,6 +160,9 @@ function check_git {
 		return $false
 	}
 
+	# Parses the Git version from text returned by git --version.
+	# [input-param] VersionString: text containing the Git version
+	# [output-param] string|null: parsed version, or null when the format does not match
 	function Try-ParseGitVersion {
 		param([string]$VersionString)
 		if (-not $VersionString) { return $null }
@@ -149,6 +177,9 @@ function check_git {
 		return $null
 	}
 
+	# Parses version text into a Version object suitable for comparisons.
+	# [input-param] VersionString: Git version text or winget version text
+	# [output-param] Version|null: version in major.minor.patch.build format, or null when parsing fails
 	function Try-ParseComparableVersion {
 		param([string]$VersionString)
 		if (-not $VersionString) { return $null }
@@ -166,6 +197,9 @@ function check_git {
 		return $null
 	}
 
+	# Infers the Git installation manager from the executable path.
+	# [input-param] ExePath: path to git.exe
+	# [output-param] string|null: manager name, e.g. scoop, chocolatey, msys2, or git-for-windows
 	function Infer-ManagerFromPath {
 		param([string]$ExePath)
 		if (-not $ExePath) { return $null }

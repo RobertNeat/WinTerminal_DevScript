@@ -1,6 +1,10 @@
 
-# Test for deep equality of two objects, with special handling for PSCustomObject, hashtables, arrays, and numeric types. 
-# This is used to validate that the configuration object can be round-tripped through JSON without losing information or structure.
+# Compares two objects recursively with support for JSON-shaped PowerShell structures.
+# [input-param] Left: first object to compare
+# [input-param] Right: second object to compare
+# [input-param] MaxDepth: maximum depth for recursive comparison
+# [input-param] Depth: current recursion depth used by internal calls
+# [output-param] bool: true when the objects are equal according to deep comparison
 function Test-ObjectEqualityDeep {
     [CmdletBinding()]
     param(

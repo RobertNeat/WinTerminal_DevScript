@@ -1,3 +1,5 @@
+# Returns built-in color schemes for Windows Terminal profiles.
+# [output-param] PSCustomObject[]: list of color schemes with names and terminal color values
 function Get-TerminalColorSchemes {
     [CmdletBinding()]
     param()

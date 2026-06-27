@@ -1,4 +1,7 @@
-# Get winodws terminal JSON configuration file path (settings.json)
+# Finds the path to the Windows Terminal settings.json file.
+# [input-param] SettingsPath: optional explicit path to settings.json, which will be validated
+# [output-param] string: full path to an existing settings.json file
+# [side-effect] Reads LOCALAPPDATA, the Appx package list, and Windows Terminal package directories.
 function Get-TerminalSettingsPath {
     [CmdletBinding()]
     param(
@@ -14,6 +17,9 @@ function Get-TerminalSettingsPath {
     $candidates = New-Object System.Collections.Generic.List[string]
     $seen = New-Object 'System.Collections.Generic.HashSet[string]'
 
+    # Adds a unique candidate path to the search list.
+    # [input-param] Path: settings.json path to add when it is not empty and has not been seen before
+    # [side-effect] Modifies the parent function's local candidates and seen collections.
     function Add-CandidatePath {
         param([Parameter(Mandatory = $true)][string] $Path)
         if ([string]::IsNullOrWhiteSpace($Path)) { return }

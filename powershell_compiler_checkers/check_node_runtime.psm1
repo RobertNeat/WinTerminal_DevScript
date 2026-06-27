@@ -1,5 +1,8 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
 
+# Checks the Node.js installation and nvm-windows configuration.
+# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, NodeHome, NvmHome, NvmSymlink, and Errors fields
+# [side-effect] Runs nvm and node, reads environment variables, and searches common installation directories.
 function check_node_runtime {
 	$result = [PSCustomObject]@{
 		Name        = "Node.js Runtime"
@@ -14,6 +17,10 @@ function check_node_runtime {
 		Errors      = (New-Object System.Collections.Generic.List[string])
 	}
 
+	# Gets an environment variable value from Machine, User, or the current process.
+	# [input-param] Name: environment variable name
+	# [output-param] string|null: first found variable value
+	# [side-effect] Reads system and user environment variables.
 	function Get-EnvVarValue {
 		param(
 			[Parameter(Mandatory = $true)][string]$Name
@@ -29,12 +36,19 @@ function check_node_runtime {
 		return $value
 	}
 
+	# Normalizes a directory path string for comparisons.
+	# [input-param] Path: directory path
+	# [output-param] string|null: path without trailing separators, or null for an empty value
 	function Normalize-Dir {
 		param([string]$Path)
 		if (-not $Path) { return $null }
 		return ($Path.Trim().TrimEnd('\\'))
 	}
 
+	# Checks whether a PATH variable contains the specified directory.
+	# [input-param] PathVariableValue: semicolon-separated PATH variable value
+	# [input-param] Directory: directory expected in PATH
+	# [output-param] bool: true when Directory appears in PathVariableValue
 	function Test-PathContainsDirectory {
 		param(
 			[string]$PathVariableValue,
@@ -55,6 +69,9 @@ function check_node_runtime {
 		return $false
 	}
 
+	# Parses the Node.js version from node --version or nvm text.
+	# [input-param] VersionString: text containing the Node.js version
+	# [output-param] string|null: version without the v prefix, or null when the format does not match
 	function Try-ParseNodeVersion {
 		param([string]$VersionString)
 		if (-not $VersionString) { return $null }
@@ -65,6 +82,10 @@ function check_node_runtime {
 		return $null
 	}
 
+	# Determines the real node.exe path for the active Node.js process.
+	# [input-param] NodePath: path to node.exe or the node command
+	# [output-param] string|null: real path from fs.realpathSync(process.execPath), or null
+	# [side-effect] Runs Node.js with a JavaScript expression that reads the real process path.
 	function Try-GetNodeRealExecutablePath {
 		param([Parameter(Mandatory = $true)][string]$NodePath)
 		try {
@@ -79,6 +100,10 @@ function check_node_runtime {
 		return $null
 	}
 
+	# Gets and parses the Node.js version for the specified executable.
+	# [input-param] NodePath: path to node.exe or the node command
+	# [output-param] string|null: parsed Node.js version, or null
+	# [side-effect] Runs node --version.
 	function Try-GetNodeVersion {
 		param([Parameter(Mandatory = $true)][string]$NodePath)
 		try {

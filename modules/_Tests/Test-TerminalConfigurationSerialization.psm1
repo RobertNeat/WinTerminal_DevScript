@@ -1,8 +1,12 @@
 Import-Module ".\modules\terminal.configuration\Get-TerminalSettingsPath.psm1"
 Import-Module ".\modules\_Tests\Test-ObjectEqualityDeep.psm1"
 
-# Test the serialization and deserialization of the configuration object to ensure that it can be round-tripped through JSON without losing information or structure. 
-# This is important because the configuration is loaded from JSON, manipulated as a PowerShell object, and then serialized back to JSON when saving.
+# Checks whether the Windows Terminal configuration survives JSON serialization without losing structure.
+# [input-param] Configuration: configuration object or wrapper containing Settings and optionally SettingsPath
+# [input-param] SettingsPath: optional path to the original settings.json
+# [input-param] JsonDepth: depth used by ConvertTo-Json and recursive comparison
+# [output-param] bool: true when the object after JSON round-trip is equal to the original settings.json
+# [side-effect] Reads the original settings.json file from disk.
 function Test-TerminalConfigurationSerialization {
     [CmdletBinding()]
     param(

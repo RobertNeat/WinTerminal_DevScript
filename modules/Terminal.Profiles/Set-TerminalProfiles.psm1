@@ -6,10 +6,13 @@ Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1"
 Import-Module ".\modules\_Tests\Test-CmdProfile.psm1"
 Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1"
 
-# manipulate JSON entries:
-# - delete the entries that are not CMD, PowerShell
-# - add entries for git bash, node, python (if not already present)
-# - customize icons, names, color schemes for the entries
+# Normalizes the Windows Terminal profile list and adds developer tool profiles.
+# [input-param] ExecutablesMap: map of executable paths; supported keys are git, node, and python
+# [input-param] SettingsObject: object from Get-TerminalConfiguration or parsed settings.json; when empty, the configuration is loaded automatically
+# [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
+# [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
+# [output-param] object: the same SettingsObject after modification
+# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, and adds Git Bash, Node, and Python when executables are detected.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(

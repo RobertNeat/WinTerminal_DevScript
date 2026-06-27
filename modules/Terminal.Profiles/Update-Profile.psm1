@@ -1,4 +1,8 @@
-# Upset profile: if it exists, update it; if not, add it.
+# Updates an existing terminal profile or adds a new one.
+# [input-param] Profiles: mutable Windows Terminal profile list
+# [input-param] Name: profile name to find or create
+# [input-param] CommandLine: commandline value to set on the profile
+# [side-effect] Modifies the Profiles list in memory: updates a profile or adds a new profile object.
 function Update-Profile {
     param(
         [Parameter(Mandatory = $true)][System.Collections.IList]$Profiles,

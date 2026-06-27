@@ -1,6 +1,9 @@
 
-# [INTERNAL/EXTERNAL]
-# function that overrides the settings.json with the modified configuration (after manipulation by Set-TerminalProfiles)
+# Saves the modified Windows Terminal configuration to settings.json.
+# [input-param] Configuration: configuration object or wrapper containing the Settings property
+# [input-param] SettingsPath: optional target settings.json path; when empty, it is detected automatically
+# [output-param] PSCustomObject: the same Configuration object that was passed to the function
+# [side-effect] Overwrites settings.json and creates and removes a temporary JSON file.
 function Save-TerminalConfiguration {
     param(
         [PSCustomObject] $Configuration,

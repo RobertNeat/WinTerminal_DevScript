@@ -1,6 +1,9 @@
 
-# [add]: "tabWidthMode": "titleLength",
-# [add]: "searchWebDefaultQueryUrl": "https://www.google.com/search?q=%22%s%22",
+# Adds or overwrites global Windows Terminal settings.
+# [input-param] Configuration: configuration object or wrapper containing the Settings property
+# [input-param] ParamsMap: map of setting names and values to set on the root settings.json object
+# [output-param] PSCustomObject: the same Configuration object after modification
+# [side-effect] Modifies the passed configuration object in memory.
 function Add-TerminalSettings {
     param(
         [PSCustomObject] $Configuration,

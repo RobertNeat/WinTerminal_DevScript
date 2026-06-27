@@ -1,8 +1,10 @@
 Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1"
 Import-Module ".\modules\Terminal.Themes\Get-TerminalColorSchemes.psm1"
 
-# - define additional color schemes for each profile (git bash, node, python)
-# - add color schemes reference to each profile (git bash, node, python)
+# Adds or updates built-in Windows Terminal color schemes.
+# [input-param] Configuration: configuration object or wrapper containing the Settings property
+# [output-param] PSCustomObject: the same Configuration object after modification
+# [side-effect] Modifies the schemes array in memory, overwriting schemes with the same names.
 function Set-TerminalColorSchemes {
     [CmdletBinding()]
     param(

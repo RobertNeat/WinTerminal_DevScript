@@ -1,5 +1,8 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
 
+# Checks the Python interpreter installation and pyenv-win configuration.
+# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, PythonHome, and Errors fields
+# [side-effect] Runs python/pyenv shims, reads environment variables, and searches common installation directories.
 function check_python_interpreter {
 	$result = [PSCustomObject]@{
 		Name        = "Python Interpreter"
@@ -12,6 +15,10 @@ function check_python_interpreter {
 		Errors      = (New-Object System.Collections.Generic.List[string])
 	}
 
+	# Gets an environment variable value from Machine, User, or the current process.
+	# [input-param] Name: environment variable name
+	# [output-param] string|null: first found variable value
+	# [side-effect] Reads system and user environment variables.
 	function Get-EnvVarValue {
 		param([Parameter(Mandatory = $true)][string]$Name)
 		$value = [System.Environment]::GetEnvironmentVariable($Name, 'Machine')
@@ -20,6 +27,9 @@ function check_python_interpreter {
 		return $value
 	}
 
+	# Normalizes a PATH entry for directory comparisons.
+	# [input-param] Path: single path entry, optionally quoted
+	# [output-param] string|null: normalized path without a trailing separator, or null
 	function Normalize-PathEntry {
 		param([string]$Path)
 		if (-not $Path) { return $null }
@@ -30,6 +40,10 @@ function check_python_interpreter {
 		return $p.Trim().TrimEnd('\\')
 	}
 
+	# Checks whether a PATH variable contains the specified directory.
+	# [input-param] PathVariableValue: semicolon-separated PATH variable value
+	# [input-param] Directory: directory expected in PATH
+	# [output-param] bool: true when Directory appears in PathVariableValue
 	function Test-PathContainsDirectory {
 		param(
 			[string]$PathVariableValue,
@@ -48,6 +62,9 @@ function check_python_interpreter {
 		return $false
 	}
 
+	# Parses the Python version from output text.
+	# [input-param] Line: text line containing the version number
+	# [output-param] string|null: version in major.minor.patch format, or null
 	function Try-ParsePythonVersion {
 		param([string]$Line)
 		if (-not $Line) { return $null }
@@ -55,6 +72,10 @@ function check_python_interpreter {
 		return $null
 	}
 
+	# Gets the real sys.executable path for the specified Python interpreter.
+	# [input-param] PythonPath: path to python.exe, python3.exe, or a pyenv shim
+	# [output-param] string|null: path from sys.executable, or null
+	# [side-effect] Runs Python with a short command that imports sys.
 	function Try-GetPythonSysExecutable {
 		param([Parameter(Mandatory = $true)][string]$PythonPath)
 		try {
@@ -67,6 +88,10 @@ function check_python_interpreter {
 		return $null
 	}
 
+	# Gets and parses the Python version for the specified interpreter.
+	# [input-param] PythonPath: path to python.exe, python3.exe, or a pyenv shim
+	# [output-param] string|null: parsed Python version, or null
+	# [side-effect] Runs python --version.
 	function Try-GetPythonVersion {
 		param([Parameter(Mandatory = $true)][string]$PythonPath)
 		try {
@@ -78,6 +103,9 @@ function check_python_interpreter {
 		}
 	}
 
+	# Finds the pyenv-win root directory.
+	# [output-param] string|null: PYENV_ROOT/PYENV path or the default pyenv-win path
+	# [side-effect] Reads environment variables and appends errors to the parent function's report.
 	function Resolve-PyenvRoot {
 		$pyenvRoot = $null
 		foreach ($varName in @('PYENV_ROOT', 'PYENV')) {
@@ -98,6 +126,10 @@ function check_python_interpreter {
 		return $pyenvRoot
 	}
 
+	# Finds a Python shim in the pyenv-win directory.
+	# [input-param] PyenvRoot: pyenv-win root directory
+	# [output-param] string|null: path to the first found python/python3 shim
+	# [side-effect] Checks file existence in the shims directory.
 	function Resolve-PyenvShimPython {
 		param([Parameter(Mandatory = $true)][string]$PyenvRoot)
 		$shimsDir = Join-Path $PyenvRoot 'shims'

@@ -1,3 +1,10 @@
+# Searches the specified directories for compiler or runtime executables.
+# [input-param] CompilerNames: program names without extension, e.g. git, node, or python
+# [input-param] CompilerExtension: file extension, e.g. exe
+# [input-param] SearchPaths: starting directories to search
+# [input-param] Depth: maximum recursion depth for Get-ChildItem
+# [output-param] PSCustomObject[]: result list with CompilerName, FullPath, and Directory
+# [side-effect] Reads the directory structure under the provided SearchPaths.
 function search_system_for_compiler {
     param(
         [string[]] $CompilerNames,

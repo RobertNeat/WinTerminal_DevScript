@@ -1,5 +1,9 @@
 Import-Module ".\modules\Terminal.Configuration\Get-TerminalVersion.psm1"
 
+# Checks whether the installed Windows Terminal meets the minimum version.
+# [input-param] MinimumVersion: minimum required Windows Terminal version
+# [output-param] version: detected Windows Terminal version when it is high enough
+# [side-effect] Reads the Windows Terminal version and throws an exception when it is too old.
 function Test-TerminalMinimumVersion {
     [CmdletBinding()]
     param(

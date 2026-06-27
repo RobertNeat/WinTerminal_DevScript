@@ -1,4 +1,6 @@
-# Get Windows Terminal version by checking installed Appx packages and wt.exe file version as a fallback.
+# Detects the highest available Windows Terminal version.
+# [output-param] version: highest version found in Appx packages or in the wt.exe file
+# [side-effect] Reads installed Appx packages and wt.exe file metadata from PATH.
 function Get-TerminalVersion {
     [CmdletBinding()]
     param()

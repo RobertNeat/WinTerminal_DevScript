@@ -1,5 +1,8 @@
 Import-Module ".\modules\Utils\Get-ExecutableToken.psm1"
 
+# Checks whether a Windows Terminal profile represents Windows PowerShell.
+# [input-param] Profile: profile object with name and/or commandline fields
+# [output-param] bool: true when the name or commandline points to powershell.exe
 function Test-WindowsPowerShellProfile {
     param([psobject]$Profile)
     if (-not $Profile) { return $false }

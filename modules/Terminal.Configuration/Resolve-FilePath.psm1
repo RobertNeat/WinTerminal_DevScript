@@ -1,3 +1,7 @@
+# Resolves the path to an executable file or to a file inside a directory.
+# [input-param] Candidate: path to a file or directory to check
+# [input-param] FallbackRelativePaths: relative paths checked inside Candidate when Candidate is a directory
+# [output-param] string|null: full path to the found file, or null when nothing matches
 function Resolve-FilePath {
     param(
         [string]$Candidate,

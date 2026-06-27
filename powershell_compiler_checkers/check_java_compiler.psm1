@@ -1,5 +1,8 @@
 Import-Module ".\powershell_compiler_checkers\search_system_for_compiler"
 
+# Checks the Java compiler and runtime installation.
+# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, JavaHome, and Errors fields
+# [side-effect] Runs javac/java, reads JAVA_HOME and PATH, and searches common installation directories.
 function check_java_compiler {
     $result = [PSCustomObject]@{
         Name = "Java Compiler"

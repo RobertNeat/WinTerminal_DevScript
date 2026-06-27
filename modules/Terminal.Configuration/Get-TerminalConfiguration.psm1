@@ -4,11 +4,12 @@ Import-Module ".\modules\_Tests\Test-TerminalMinimumVersion.psm1"
 Import-Module ".\modules\_Tests\Test-TerminalConfigurationSerialization.psm1"
 
 
-# Get Windows Terminal configuration from settings.json
-# [input-param] SettingsPath: resolved path to settings.json
-# [output-param] TerminalVersion: detected WT version string
-# [output-param] JsonDepth: the depth used for ConvertTo-Json (PowerShell 5’s max is 100)
-# [output-param] Settings: the actual parsed JSON as a nested PSCustomObject tree — this is what you should edit
+# Gets the Windows Terminal configuration from settings.json.
+# [input-param] SettingsPath: path to settings.json; resolved by Get-TerminalSettingsPath
+# [input-param] JsonDepth: depth used when validating JSON serialization
+# [input-param] SkipRoundTripValidation: skips validation of configuration re-serialization
+# [output-param] PSCustomObject: WindowsTerminal.Configuration wrapper with SettingsPath, TerminalVersion, JsonDepth, and Settings fields
+# [side-effect] Reads settings.json, checks the Windows Terminal version, and optionally performs round-trip JSON validation.
 function Get-TerminalConfiguration {
     [CmdletBinding()]
     param(
