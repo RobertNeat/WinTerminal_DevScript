@@ -1,9 +1,15 @@
-Import-Module ".\powershell_compiler_checkers\search_system_for_compiler" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\Test-PathContainsDirectory.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Node\ConvertFrom-NodeVersionText.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Node\Get-NodeRealExecutablePath.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Node\Get-NodeVersion.psm1" -ErrorAction Stop
 
 # Checks the Node.js installation and nvm-windows configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, NodeHome, NvmHome, NvmSymlink, and Errors fields
 # [side-effect] Runs nvm and node, reads environment variables, and searches common installation directories.
-function check_node_runtime {
+function Get-NodeRuntimeReport {
 	$result = [PSCustomObject]@{
 		Name        = "Node.js Runtime"
 		Installed   = $false
@@ -17,103 +23,6 @@ function check_node_runtime {
 		Errors      = (New-Object System.Collections.Generic.List[string])
 	}
 
-	# Gets an environment variable value from Machine, User, or the current process.
-	# [input-param] Name: environment variable name
-	# [output-param] string|null: first found variable value
-	# [side-effect] Reads system and user environment variables.
-	function Get-EnvVarValue {
-		param(
-			[Parameter(Mandatory = $true)][string]$Name
-		)
-
-		$value = [System.Environment]::GetEnvironmentVariable($Name, 'Machine')
-		if (-not $value) {
-			$value = [System.Environment]::GetEnvironmentVariable($Name, 'User')
-		}
-		if (-not $value) {
-			$value = [System.Environment]::GetEnvironmentVariable($Name)  # bieżący proces
-		}
-		return $value
-	}
-
-	# Normalizes a directory path string for comparisons.
-	# [input-param] Path: directory path
-	# [output-param] string|null: path without trailing separators, or null for an empty value
-	function Normalize-Dir {
-		param([string]$Path)
-		if (-not $Path) { return $null }
-		return ($Path.Trim().TrimEnd('\\'))
-	}
-
-	# Checks whether a PATH variable contains the specified directory.
-	# [input-param] PathVariableValue: semicolon-separated PATH variable value
-	# [input-param] Directory: directory expected in PATH
-	# [output-param] bool: true when Directory appears in PathVariableValue
-	function Test-PathContainsDirectory {
-		param(
-			[string]$PathVariableValue,
-			[string]$Directory
-		)
-
-		if (-not $PathVariableValue -or -not $Directory) { return $false }
-		$dirNorm = Normalize-Dir $Directory
-		if (-not $dirNorm) { return $false }
-
-		foreach ($entry in ($PathVariableValue -split ';')) {
-			$entryNorm = Normalize-Dir $entry
-			if ($entryNorm -and ($entryNorm -ieq $dirNorm)) {
-				return $true
-			}
-		}
-
-		return $false
-	}
-
-	# Parses the Node.js version from node --version or nvm text.
-	# [input-param] VersionString: text containing the Node.js version
-	# [output-param] string|null: version without the v prefix, or null when the format does not match
-	function Try-ParseNodeVersion {
-		param([string]$VersionString)
-		if (-not $VersionString) { return $null }
-		# node --version zwraca np. "v20.11.1"
-		if ($VersionString -match 'v?(\d+\.\d+\.\d+)') {
-			return $Matches[1]
-		}
-		return $null
-	}
-
-	# Determines the real node.exe path for the active Node.js process.
-	# [input-param] NodePath: path to node.exe or the node command
-	# [output-param] string|null: real path from fs.realpathSync(process.execPath), or null
-	# [side-effect] Runs Node.js with a JavaScript expression that reads the real process path.
-	function Try-GetNodeRealExecutablePath {
-		param([Parameter(Mandatory = $true)][string]$NodePath)
-		try {
-			# W nvm-windows node bywa uruchamiany przez symlink/junction (np. C:\nvm\nodejs\node.exe).
-			# process.execPath może wskazywać ścieżkę logiczną; fs.realpathSync daje ścieżkę docelową.
-			$out = & $NodePath @('-p', "require('fs').realpathSync(process.execPath)") 2>&1
-			$line = ($out | Select-Object -First 1 | Out-String).Trim()
-			if ($line -and (Test-Path $line)) { return $line }
-		} catch {
-			return $null
-		}
-		return $null
-	}
-
-	# Gets and parses the Node.js version for the specified executable.
-	# [input-param] NodePath: path to node.exe or the node command
-	# [output-param] string|null: parsed Node.js version, or null
-	# [side-effect] Runs node --version.
-	function Try-GetNodeVersion {
-		param([Parameter(Mandatory = $true)][string]$NodePath)
-		try {
-			$out = & $NodePath @('--version') 2>&1
-			$line = ($out | Select-Object -First 1 | Out-String).Trim()
-			return (Try-ParseNodeVersion $line)
-		} catch {
-			return $null
-		}
-	}
 
 	# -------------------------------------------------------------------------
 	# 1. Sprawdzenie Node Version Manager (nvm-windows) FIRST
@@ -139,7 +48,7 @@ function check_node_runtime {
 		try {
 			$currentOut = & $nvmCmd.Source current 2>&1
 			$currentStr = $currentOut | Select-Object -First 1 | Out-String
-			$parsedCurrent = Try-ParseNodeVersion $currentStr
+			$parsedCurrent = ConvertFrom-NodeVersionText $currentStr
 			if ($parsedCurrent) {
 				$result.Version = $parsedCurrent
 			}
@@ -176,10 +85,10 @@ function check_node_runtime {
 		}
 
 		if ($nodeCmd) {
-			$ver = Try-GetNodeVersion -NodePath $nodeCmd.Source
+			$ver = Get-NodeVersion -NodePath $nodeCmd.Source
 			if ($ver) { $result.Version = $ver }
 
-			$realNodeExe = Try-GetNodeRealExecutablePath -NodePath $nodeCmd.Source
+			$realNodeExe = Get-NodeRealExecutablePath -NodePath $nodeCmd.Source
 			if ($realNodeExe) {
 				$result.Installed = $true
 				$result.InPath    = $true
@@ -187,7 +96,7 @@ function check_node_runtime {
 			} else {
 				# Fallback: spróbuj złożyć ścieżkę na podstawie NVM_HOME + wersji
 				try {
-					$nvmHomeCandidate = Get-EnvVarValue -Name 'NVM_HOME'
+					$nvmHomeCandidate = Get-EnvironmentVariableValue -Name 'NVM_HOME'
 					if ($nvmHomeCandidate -and (Test-Path $nvmHomeCandidate) -and $result.Version) {
 						foreach ($folderName in @("v$($result.Version)", "$($result.Version)")) {
 							$candidateExe = Join-Path (Join-Path $nvmHomeCandidate $folderName) 'node.exe'
@@ -229,7 +138,7 @@ function check_node_runtime {
 		}
 
 		if ($nodeCmd) {
-			$ver = Try-GetNodeVersion -NodePath $nodeCmd.Source
+			$ver = Get-NodeVersion -NodePath $nodeCmd.Source
 			if ($ver) {
 				$result.Installed = $true
 				$result.InPath    = $true
@@ -246,7 +155,7 @@ function check_node_runtime {
 	# -------------------------------------------------------------------------
 
 	try {
-		$nvmHome = Get-EnvVarValue -Name 'NVM_HOME'
+		$nvmHome = Get-EnvironmentVariableValue -Name 'NVM_HOME'
 		if ($nvmHome) {
 			if (Test-Path $nvmHome) {
 				$result.NvmHome = $nvmHome
@@ -255,7 +164,7 @@ function check_node_runtime {
 			}
 		}
 
-		$nvmSymlink = Get-EnvVarValue -Name 'NVM_SYMLINK'
+		$nvmSymlink = Get-EnvironmentVariableValue -Name 'NVM_SYMLINK'
 		if ($nvmSymlink) {
 			if (Test-Path $nvmSymlink) {
 				$result.NvmSymlink = $nvmSymlink
@@ -328,7 +237,7 @@ function check_node_runtime {
 				"C:\\ProgramData\\chocolatey\\lib"
 			) | Where-Object { $_ -and (Test-Path $_) }
 
-			$found = search_system_for_compiler `
+			$found = Find-ExecutableFile `
 				-CompilerNames     @('node') `
 				-CompilerExtension 'exe' `
 				-SearchPaths       $possiblePaths `
@@ -347,7 +256,7 @@ function check_node_runtime {
 				$result.Errors.Add("Znaleziono 'node.exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie katalogu do PATH lub skonfiguruj nvm-windows (NVM_HOME/NVM_SYMLINK).")
 
 				try {
-					$ver = Try-GetNodeVersion -NodePath $best.FullPath
+					$ver = Get-NodeVersion -NodePath $best.FullPath
 					if ($ver) {
 						$result.Version = $ver
 					} else {
@@ -358,7 +267,7 @@ function check_node_runtime {
 				}
 			}
 		} catch {
-			$result.Errors.Add("Błąd podczas wywołania search_system_for_compiler dla node: $($_.Exception.Message)")
+			$result.Errors.Add("Błąd podczas wywołania Find-ExecutableFile dla node: $($_.Exception.Message)")
 		}
 	}
 
@@ -366,4 +275,4 @@ function check_node_runtime {
 	return $result
 }
 
-Export-ModuleMember -Function check_node_runtime
+Export-ModuleMember -Function Get-NodeRuntimeReport

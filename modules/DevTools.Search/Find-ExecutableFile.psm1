@@ -5,7 +5,7 @@
 # [input-param] Depth: maximum recursion depth for Get-ChildItem
 # [output-param] PSCustomObject[]: result list with CompilerName, FullPath, and Directory
 # [side-effect] Reads the directory structure under the provided SearchPaths.
-function search_system_for_compiler {
+function Find-ExecutableFile {
     param(
         [string[]] $CompilerNames,
         [string]   $CompilerExtension,
@@ -37,4 +37,4 @@ function search_system_for_compiler {
     return $results
 }
 
-Export-ModuleMember -Function search_system_for_compiler
+Export-ModuleMember -Function Find-ExecutableFile

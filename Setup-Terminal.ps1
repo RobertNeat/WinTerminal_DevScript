@@ -36,10 +36,10 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 # 0. Import funkcji do sprawdzania kompilatorów
-Import-Module ".\powershell_compiler_checkers\check_java_compiler.psm1"
-Import-Module ".\powershell_compiler_checkers\check_python_interpreter.psm1"
-Import-Module ".\powershell_compiler_checkers\check_node_runtime.psm1"
-Import-Module ".\powershell_compiler_checkers\check_git.psm1"
+Import-Module ".\modules\DevTools.Checkers\Get-JavaInstallationReport.psm1"
+Import-Module ".\modules\DevTools.Checkers\Get-PythonInterpreterReport.psm1"
+Import-Module ".\modules\DevTools.Checkers\Get-NodeRuntimeReport.psm1"
+Import-Module ".\modules\DevTools.Checkers\Get-GitInstallationReport.psm1"
 
 # 1. Pobranie informacji o systemie operacyjnym, wersji powershella, ścieżkach do katalogów domowych i aktualnego katalogu
 
@@ -94,10 +94,10 @@ Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
 try {
     # print_initial_info
 
-    $java = check_java_compiler
-    $python = check_python_interpreter
-    $node = check_node_runtime
-    $git = check_git
+    $java = Get-JavaInstallationReport
+    $python = Get-PythonInterpreterReport
+    $node = Get-NodeRuntimeReport
+    $git = Get-GitInstallationReport
     # Write-Output $java
     # Write-Output $python
     # Write-Output $node

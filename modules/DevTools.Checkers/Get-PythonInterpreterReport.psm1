@@ -1,9 +1,17 @@
-Import-Module ".\powershell_compiler_checkers\search_system_for_compiler" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Utils\Test-PathContainsDirectory.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Python\Get-PythonSysExecutable.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Python\Get-PythonVersion.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Python\Get-PyenvRoot.psm1" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Python\Resolve-PyenvPythonShim.psm1" -ErrorAction Stop
+
 
 # Checks the Python interpreter installation and pyenv-win configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, PythonHome, and Errors fields
 # [side-effect] Runs python/pyenv shims, reads environment variables, and searches common installation directories.
-function check_python_interpreter {
+function Get-PythonInterpreterReport {
 	$result = [PSCustomObject]@{
 		Name        = "Python Interpreter"
 		Installed   = $false
@@ -15,137 +23,7 @@ function check_python_interpreter {
 		Errors      = (New-Object System.Collections.Generic.List[string])
 	}
 
-	# Gets an environment variable value from Machine, User, or the current process.
-	# [input-param] Name: environment variable name
-	# [output-param] string|null: first found variable value
-	# [side-effect] Reads system and user environment variables.
-	function Get-EnvVarValue {
-		param([Parameter(Mandatory = $true)][string]$Name)
-		$value = [System.Environment]::GetEnvironmentVariable($Name, 'Machine')
-		if (-not $value) { $value = [System.Environment]::GetEnvironmentVariable($Name, 'User') }
-		if (-not $value) { $value = [System.Environment]::GetEnvironmentVariable($Name) }
-		return $value
-	}
 
-	# Normalizes a PATH entry for directory comparisons.
-	# [input-param] Path: single path entry, optionally quoted
-	# [output-param] string|null: normalized path without a trailing separator, or null
-	function Normalize-PathEntry {
-		param([string]$Path)
-		if (-not $Path) { return $null }
-		$p = $Path.Trim()
-		if ($p.StartsWith('"') -and $p.EndsWith('"')) {
-			$p = $p.Trim('"')
-		}
-		return $p.Trim().TrimEnd('\\')
-	}
-
-	# Checks whether a PATH variable contains the specified directory.
-	# [input-param] PathVariableValue: semicolon-separated PATH variable value
-	# [input-param] Directory: directory expected in PATH
-	# [output-param] bool: true when Directory appears in PathVariableValue
-	function Test-PathContainsDirectory {
-		param(
-			[string]$PathVariableValue,
-			[string]$Directory
-		)
-
-		if (-not $PathVariableValue -or -not $Directory) { return $false }
-		$dirNorm = Normalize-PathEntry $Directory
-		if (-not $dirNorm) { return $false }
-
-		foreach ($entry in ($PathVariableValue -split ';')) {
-			$entryNorm = Normalize-PathEntry $entry
-			if ($entryNorm -and ($entryNorm -ieq $dirNorm)) { return $true }
-		}
-
-		return $false
-	}
-
-	# Parses the Python version from output text.
-	# [input-param] Line: text line containing the version number
-	# [output-param] string|null: version in major.minor.patch format, or null
-	function Try-ParsePythonVersion {
-		param([string]$Line)
-		if (-not $Line) { return $null }
-		if ($Line -match '(\d+\.\d+\.\d+)') { return $Matches[1] }
-		return $null
-	}
-
-	# Gets the real sys.executable path for the specified Python interpreter.
-	# [input-param] PythonPath: path to python.exe, python3.exe, or a pyenv shim
-	# [output-param] string|null: path from sys.executable, or null
-	# [side-effect] Runs Python with a short command that imports sys.
-	function Try-GetPythonSysExecutable {
-		param([Parameter(Mandatory = $true)][string]$PythonPath)
-		try {
-			$out = & $PythonPath @('-c', 'import sys; print(sys.executable)') 2>&1
-			$line = ($out | Select-Object -First 1 | Out-String).Trim()
-			if ($line -and (Test-Path $line)) { return $line }
-		} catch {
-			return $null
-		}
-		return $null
-	}
-
-	# Gets and parses the Python version for the specified interpreter.
-	# [input-param] PythonPath: path to python.exe, python3.exe, or a pyenv shim
-	# [output-param] string|null: parsed Python version, or null
-	# [side-effect] Runs python --version.
-	function Try-GetPythonVersion {
-		param([Parameter(Mandatory = $true)][string]$PythonPath)
-		try {
-			$out = & $PythonPath @('--version') 2>&1
-			$line = ($out | Select-Object -First 1 | Out-String).Trim()
-			return (Try-ParsePythonVersion $line)
-		} catch {
-			return $null
-		}
-	}
-
-	# Finds the pyenv-win root directory.
-	# [output-param] string|null: PYENV_ROOT/PYENV path or the default pyenv-win path
-	# [side-effect] Reads environment variables and appends errors to the parent function's report.
-	function Resolve-PyenvRoot {
-		$pyenvRoot = $null
-		foreach ($varName in @('PYENV_ROOT', 'PYENV')) {
-			$candidate = Get-EnvVarValue -Name $varName
-			if ($candidate -and (Test-Path $candidate)) {
-				$pyenvRoot = $candidate
-				break
-			} elseif ($candidate) {
-				$result.Errors.Add("Zmienna '$varName' wskazuje na nieistniejącą ścieżkę: '$candidate'")
-			}
-		}
-
-		if (-not $pyenvRoot) {
-			$defaultPyenvRoot = Join-Path $env:USERPROFILE '.pyenv\\pyenv-win'
-			if (Test-Path $defaultPyenvRoot) { $pyenvRoot = $defaultPyenvRoot }
-		}
-
-		return $pyenvRoot
-	}
-
-	# Finds a Python shim in the pyenv-win directory.
-	# [input-param] PyenvRoot: pyenv-win root directory
-	# [output-param] string|null: path to the first found python/python3 shim
-	# [side-effect] Checks file existence in the shims directory.
-	function Resolve-PyenvShimPython {
-		param([Parameter(Mandatory = $true)][string]$PyenvRoot)
-		$shimsDir = Join-Path $PyenvRoot 'shims'
-		$candidates = @(
-			(Join-Path $shimsDir 'python.bat'),
-			(Join-Path $shimsDir 'python3.bat'),
-			(Join-Path $shimsDir 'python.cmd'),
-			(Join-Path $shimsDir 'python3.cmd'),
-			(Join-Path $shimsDir 'python.exe'),
-			(Join-Path $shimsDir 'python3.exe')
-		)
-		foreach ($p in $candidates) {
-			if (Test-Path $p) { return $p }
-		}
-		return $null
-	}
 
 	$machinePath = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
 	$userPath    = [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -155,7 +33,7 @@ function check_python_interpreter {
 	# 1) pyenv-win FIRST
 	# -------------------------------------------------------------------------
 
-	$pyenvRoot = Resolve-PyenvRoot
+	$pyenvRoot = Get-PyenvRoot
 	if ($pyenvRoot) {
 		$result.Manager = 'pyenv-win'
 
@@ -185,13 +63,13 @@ function check_python_interpreter {
 		)
 		if ($shimsInPath) { $result.InPath = $true }
 
-		$shim = Resolve-PyenvShimPython -PyenvRoot $pyenvRoot
+		$shim = Resolve-PyenvPythonShim -PyenvRoot $pyenvRoot
 		if ($shim) {
-			$realExe = Try-GetPythonSysExecutable -PythonPath $shim
+			$realExe = Get-PythonSysExecutable -PythonPath $shim
 			if ($realExe) {
 				$result.Installed  = $true
 				$result.PythonHome = $realExe
-				$ver = Try-GetPythonVersion -PythonPath $shim
+				$ver = Get-PythonVersion -PythonPath $shim
 				if ($ver) { $result.Version = $ver }
 			} else {
 				$result.Errors.Add("pyenv-win: nie udało się uzyskać sys.executable z shima: '$shim'.")
@@ -201,7 +79,7 @@ function check_python_interpreter {
 		}
 
 		if (-not $result.Version -and $result.PythonHome) {
-			$ver = Try-GetPythonVersion -PythonPath $result.PythonHome
+			$ver = Get-PythonVersion -PythonPath $result.PythonHome
 			if ($ver) { $result.Version = $ver }
 		}
 	}
@@ -235,7 +113,7 @@ function check_python_interpreter {
 					continue
 				}
 
-				$realExe = Try-GetPythonSysExecutable -PythonPath $src
+				$realExe = Get-PythonSysExecutable -PythonPath $src
 				if (-not $realExe) {
 					$result.Errors.Add("Nie udało się uzyskać sys.executable z '$src'.")
 					continue
@@ -244,7 +122,7 @@ function check_python_interpreter {
 				$result.Installed  = $true
 				$result.InPath     = $true
 				$result.PythonHome = $realExe
-				$ver = Try-GetPythonVersion -PythonPath $src
+				$ver = Get-PythonVersion -PythonPath $src
 				if ($ver) { $result.Version = $ver }
 				if ($src -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') { $result.Manager = 'pyenv-win' }
 				break
@@ -259,7 +137,7 @@ function check_python_interpreter {
 	# -------------------------------------------------------------------------
 
 	try {
-		$pythonHomeEnv = Get-EnvVarValue -Name 'PYTHONHOME'
+		$pythonHomeEnv = Get-EnvironmentVariableValue -Name 'PYTHONHOME'
 		if ($pythonHomeEnv -and -not (Test-Path $pythonHomeEnv)) {
 			$result.Errors.Add("PYTHONHOME wskazuje na nieistniejącą ścieżkę: '$pythonHomeEnv'")
 		}
@@ -282,7 +160,7 @@ function check_python_interpreter {
 	}
 
 	# -------------------------------------------------------------------------
-	# 4) Fallback: search_system_for_compiler
+	# 4) Fallback: Find-ExecutableFile
 	# -------------------------------------------------------------------------
 
 	if (-not $result.PythonHome) {
@@ -307,7 +185,7 @@ function check_python_interpreter {
 				"C:\\ProgramData\\Miniconda3"
 			)
 
-			$found = search_system_for_compiler `
+			$found = Find-ExecutableFile `
 				-CompilerNames     @('python', 'python3') `
 				-CompilerExtension 'exe' `
 				-SearchPaths       $pythonPossiblePaths `
@@ -320,7 +198,7 @@ function check_python_interpreter {
 				$result.Installed  = $true
 				$result.InPath     = $false
 				$result.PythonHome = $best.FullPath
-				$ver = Try-GetPythonVersion -PythonPath $best.FullPath
+				$ver = Get-PythonVersion -PythonPath $best.FullPath
 				if ($ver) { $result.Version = $ver }
 
 				if ($best.FullPath -match '[\\/]\.pyenv[\\/]|[\\/]pyenv-win[\\/]') {
@@ -336,7 +214,7 @@ function check_python_interpreter {
 				$result.Errors.Add("Znaleziono '$($best.CompilerName).exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie katalogu do PATH.")
 			}
 		} catch {
-			$result.Errors.Add("Błąd podczas wywołania search_system_for_compiler: $($_.Exception.Message)")
+			$result.Errors.Add("Błąd podczas wywołania Find-ExecutableFile: $($_.Exception.Message)")
 		}
 	}
 
@@ -344,4 +222,4 @@ function check_python_interpreter {
 	return $result
 }
 
-Export-ModuleMember -Function check_python_interpreter
+Export-ModuleMember -Function Get-PythonInterpreterReport

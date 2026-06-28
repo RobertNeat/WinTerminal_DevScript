@@ -1,9 +1,9 @@
-Import-Module ".\powershell_compiler_checkers\search_system_for_compiler" -ErrorAction Stop
+Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
 
 # Checks the Java compiler and runtime installation.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, JavaHome, and Errors fields
 # [side-effect] Runs javac/java, reads JAVA_HOME and PATH, and searches common installation directories.
-function check_java_compiler {
+function Get-JavaInstallationReport {
     $result = [PSCustomObject]@{
         Name = "Java Compiler"
         Installed = $false
@@ -105,7 +105,7 @@ function check_java_compiler {
             $result.Errors.Add("Błąd przy pobieraniu wersji Javy: $($_.Exception.Message)")
         }
     }
-    # - Jeśli nie znaleziono kompilatora — uruchom search_system_for_compiler dla java ---
+    # - Jeśli nie znaleziono kompilatora — uruchom Find-ExecutableFile dla java ---
     if (-not $result.Installed) {
         try {
             $javaPossiblePaths = @(
@@ -119,7 +119,7 @@ function check_java_compiler {
                 "C:\ProgramData\chocolatey\lib"
             )
             
-            $found = search_system_for_compiler `
+            $found = Find-ExecutableFile `
                 -CompilerNames     @('java', 'javac') `
                 -CompilerExtension 'exe' `
                 -SearchPaths       $javaPossiblePaths `
@@ -148,4 +148,4 @@ function check_java_compiler {
 }
 
 
-Export-ModuleMember -Function check_java_compiler
+Export-ModuleMember -Function Get-JavaInstallationReport
