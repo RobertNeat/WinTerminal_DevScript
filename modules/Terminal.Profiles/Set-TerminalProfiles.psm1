@@ -1,6 +1,8 @@
 Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Configuration\Resolve-FilePath.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Profiles\Update-Profile.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Copy-TerminalProfileIcons.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileIcon.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1" -ErrorAction Stop
 Import-Module ".\modules\_Tests\Test-CmdProfile.psm1" -ErrorAction Stop
 Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
@@ -11,7 +13,7 @@ Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction
 # [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
 # [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
 # [output-param] object: the same SettingsObject after modification
-# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, and adds Git Bash, Node, and Python when executables are detected.
+# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, and Python when executables are detected, copies profile icon resources next to settings.json, and assigns profile icon paths.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(
@@ -39,6 +41,15 @@ function Set-TerminalProfiles {
     if (-not $SettingsObject) {
         if (-not $SettingsPath) { $SettingsPath = Get-TerminalSettingsPath }
         $SettingsObject = Get-TerminalConfiguration -SettingsPath $SettingsPath -JsonDepth $JsonDepth
+    }
+
+    if ((-not $SettingsPath) -and $SettingsObject -and ($SettingsObject.PSObject.Properties.Name -contains 'SettingsPath')) {
+        $SettingsPath = [string]$SettingsObject.SettingsPath
+    }
+
+    $profileIcons = @{}
+    if ($SettingsPath) {
+        $profileIcons = Copy-TerminalProfileIcons -SettingsPath $SettingsPath
     }
 
     # Operate on Settings property when the wrapper is passed.
@@ -89,6 +100,9 @@ function Set-TerminalProfiles {
         $leaf = Split-Path -Path $gitExe -Leaf
         $gitCmd = if ($leaf -and ($leaf -ieq 'bash.exe')) { '"{0}" --login -i' -f $gitExe } else { '"{0}"' -f $gitExe }
         Update-Profile -Profiles $kept -Name 'Git Bash' -CommandLine $gitCmd
+        if ($profileIcons.ContainsKey('git')) {
+            [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Git Bash' -IconPath $profileIcons['git'])
+        }
     } else {
         Write-Verbose "Git Bash not added (path missing or not found)."
     }
@@ -96,6 +110,9 @@ function Set-TerminalProfiles {
     $nodeExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['node']) -FallbackRelativePaths @('node.exe')
     if ($nodeExe) {
         Update-Profile -Profiles $kept -Name 'Node' -CommandLine ('"{0}"' -f $nodeExe)
+        if ($profileIcons.ContainsKey('node')) {
+            [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Node' -IconPath $profileIcons['node'])
+        }
     } else {
         Write-Verbose "Node profile not added (path missing or not found)."
     }
@@ -103,6 +120,9 @@ function Set-TerminalProfiles {
     $pythonExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['python']) -FallbackRelativePaths @('python.exe', 'python3.exe')
     if ($pythonExe) {
         Update-Profile -Profiles $kept -Name 'Python' -CommandLine ('"{0}"' -f $pythonExe)
+        if ($profileIcons.ContainsKey('python')) {
+            [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Python' -IconPath $profileIcons['python'])
+        }
     } else {
         Write-Verbose "Python profile not added (path missing or not found)."
     }
