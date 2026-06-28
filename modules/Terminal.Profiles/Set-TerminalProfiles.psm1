@@ -3,6 +3,7 @@ Import-Module ".\modules\Terminal.Configuration\Resolve-FilePath.psm1" -ErrorAct
 Import-Module ".\modules\Terminal.Profiles\Update-Profile.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Profiles\Copy-TerminalProfileIcons.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileIcon.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileStartingDirectory.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1" -ErrorAction Stop
 Import-Module ".\modules\_Tests\Test-CmdProfile.psm1" -ErrorAction Stop
 Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
@@ -13,7 +14,7 @@ Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction
 # [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
 # [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
 # [output-param] object: the same SettingsObject after modification
-# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, and Python when executables are detected, copies profile icon resources next to settings.json, and assigns profile icon paths.
+# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, and Python when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(
@@ -100,6 +101,7 @@ function Set-TerminalProfiles {
         $leaf = Split-Path -Path $gitExe -Leaf
         $gitCmd = if ($leaf -and ($leaf -ieq 'bash.exe')) { '"{0}" --login -i' -f $gitExe } else { '"{0}"' -f $gitExe }
         Update-Profile -Profiles $kept -Name 'Git Bash' -CommandLine $gitCmd
+        [void](Set-TerminalProfileStartingDirectory -Profiles $kept -Name 'Git Bash' -StartingDirectory '%USERPROFILE%')
         if ($profileIcons.ContainsKey('git')) {
             [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Git Bash' -IconPath $profileIcons['git'])
         }
