@@ -14,7 +14,7 @@ Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction
 # [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
 # [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
 # [output-param] object: the same SettingsObject after modification
-# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, Python, and Java when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
+# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, Python, and Java/jshell when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(
@@ -129,24 +129,42 @@ function Set-TerminalProfiles {
         Write-Verbose "Python profile not added (path missing or not found)."
     }
 
-    $javaExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['java']) -FallbackRelativePaths @('bin\jshell.exe', 'bin\java.exe', 'jshell.exe', 'java.exe')
-    if ($javaExe) {
-        $javaProfileExe = $javaExe
-        $javaExeDirectory = Split-Path -Path $javaExe -Parent
-        $javaExeLeaf = Split-Path -Path $javaExe -Leaf
-        $jshellCandidate = Join-Path -Path $javaExeDirectory -ChildPath 'jshell.exe'
-        $runtimeCandidate = Join-Path -Path $javaExeDirectory -ChildPath 'java.exe'
+    $javaCandidate = if ($ExecutablesMap.ContainsKey('java')) { [string]$ExecutablesMap['java'] } else { $null }
+    $jshellExe = $null
 
-        if (Test-Path -LiteralPath $jshellCandidate) {
-            $javaProfileExe = (Resolve-Path -LiteralPath $jshellCandidate).Path
-        } elseif (($javaExeLeaf -ieq 'javac.exe') -and (Test-Path -LiteralPath $runtimeCandidate)) {
-            $javaProfileExe = (Resolve-Path -LiteralPath $runtimeCandidate).Path
+    if (-not [string]::IsNullOrWhiteSpace($javaCandidate)) {
+        $javaCandidate = $javaCandidate.Trim().Trim('"')
+
+        if (Test-Path -LiteralPath $javaCandidate) {
+            $javaItem = Get-Item -LiteralPath $javaCandidate -ErrorAction SilentlyContinue
+
+            if ($javaItem -and $javaItem.PSIsContainer) {
+                foreach ($relativePath in @('bin\jshell.exe', 'jshell.exe')) {
+                    $jshellCandidate = Join-Path -Path $javaItem.FullName -ChildPath $relativePath
+                    if (Test-Path -LiteralPath $jshellCandidate) {
+                        $jshellExe = (Resolve-Path -LiteralPath $jshellCandidate).Path
+                        break
+                    }
+                }
+            } elseif ($javaItem -and ($javaItem.Name -ieq 'jshell.exe')) {
+                $jshellExe = $javaItem.FullName
+            } elseif ($javaItem -and (($javaItem.Name -ieq 'java.exe') -or ($javaItem.Name -ieq 'javac.exe'))) {
+                $javaExeDirectory = Split-Path -Path $javaItem.FullName -Parent
+                $jshellCandidate = Join-Path -Path $javaExeDirectory -ChildPath 'jshell.exe'
+                if (Test-Path -LiteralPath $jshellCandidate) {
+                    $jshellExe = (Resolve-Path -LiteralPath $jshellCandidate).Path
+                }
+            }
         }
+    }
 
-        Update-Profile -Profiles $kept -Name 'Java' -CommandLine ('"{0}"' -f $javaProfileExe)
+    if ($jshellExe) {
+        Update-Profile -Profiles $kept -Name 'Java' -CommandLine ('"{0}"' -f $jshellExe)
         if ($profileIcons.ContainsKey('java')) {
             [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Java' -IconPath $profileIcons['java'])
         }
+    } elseif (-not [string]::IsNullOrWhiteSpace($javaCandidate)) {
+        Write-Warning "Java profile not added: jshell.exe was not found, so no interactive Java session can be configured."
     } else {
         Write-Verbose "Java profile not added (path missing or not found)."
     }
