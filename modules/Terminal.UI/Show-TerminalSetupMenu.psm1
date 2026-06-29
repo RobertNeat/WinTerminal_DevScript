@@ -7,10 +7,12 @@ Import-Module ".\modules\Terminal.UI\Write-TerminalSetupMenuLine.psm1" -ErrorAct
 # [input-param] Cursor: zero-based index of the active option row in Items
 # [input-param] ActionCursor: zero-based index of the active action button; 0 is Apply, 1 is Cancel
 # [input-param] IsActionRow: when true, highlights the action button row instead of an option row
+# [input-param] InitialInfoLines: optional system information lines displayed above the menu
 # [output-param] None.
 # [side-effect] Clears and redraws the host console.
 function Show-TerminalSetupMenu {
     param(
+        [string[]] $InitialInfoLines = @(),
         [object[]] $ProfileOptions,
         [object[]] $StepOptions,
         [object[]] $Items,
@@ -23,6 +25,14 @@ function Show-TerminalSetupMenu {
     Write-Host "Windows Terminal setup"
     Write-Host "Use Up/Down arrows to move, Space/Enter to toggle, Enter on Apply/Cancel to finish, Esc to cancel."
     Write-Host ""
+
+    if ($InitialInfoLines.Count -gt 0) {
+        foreach ($line in $InitialInfoLines) {
+            Write-Host $line
+        }
+        Write-Host ""
+    }
+
     Write-Host "Profiles to configure:"
 
     for ($i = 0; $i -lt $ProfileOptions.Count; $i++) {

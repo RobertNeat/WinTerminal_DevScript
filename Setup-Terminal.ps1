@@ -73,9 +73,9 @@ function print_initial_info {
 }
 
 try {
-    print_initial_info
+    $initialInfo = @(print_initial_info)
 
-    $setupSelection = Invoke-TerminalSetupMenu
+    $setupSelection = Invoke-TerminalSetupMenu -InitialInfoLines $initialInfo
     if (-not $setupSelection.Applied) {
         Write-Output "Setup cancelled. No changes were written."
         return

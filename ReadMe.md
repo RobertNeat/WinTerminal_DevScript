@@ -1,10 +1,8 @@
 # Setup-Terminal
 
-<p align="center">
   <img src="resources/ps_fluent_design_384.svg" alt="PowerShell Fluent Design icon" width="128" height="128">
-</p>
 
-Setup-Terminal is a PowerShell-based setup project for applying a consistent Windows Terminal configuration on a developer workstation.
+Setup-Terminal is a PowerShell_5-based setup project for applying a consistent Windows Terminal configuration on a developer workstation.
 
 The project currently focuses on detecting common developer runtimes and creating Windows Terminal profiles for them. It is designed to grow over time with more profiles, prompt configuration, and terminal setup helpers.
 
@@ -31,6 +29,10 @@ The key consideration is that the script does not download any other assets or c
 - Basic terminal behavior settings, such as tab width mode and web search URL
 
 Planned additions include more profiles and setup steps, including Winfetch configuration.
+
+<p align="center">
+  <img src="resources/shells_image.png" alt="Multiple shells outcome screenshot">
+</p>
 
 ## Requirements
 

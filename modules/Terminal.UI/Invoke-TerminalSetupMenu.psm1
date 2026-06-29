@@ -5,6 +5,10 @@ Import-Module ".\modules\Terminal.UI\Show-TerminalSetupMenu.psm1" -ErrorAction S
 # [output-param] PSCustomObject: Applied flag plus selected Profiles and Steps arrays when applied; Applied=false when cancelled
 # [side-effect] Reads keyboard input from the console and redraws the host console until Apply, Cancel, or Escape is selected.
 function Invoke-TerminalSetupMenu {
+    param(
+        [string[]] $InitialInfoLines = @()
+    )
+
     $profileOptions = @(
         New-TerminalSetupOption -Key 'git' -Label 'git' -Group 'Profile'
         New-TerminalSetupOption -Key 'python' -Label 'python' -Group 'Profile'
@@ -27,6 +31,7 @@ function Invoke-TerminalSetupMenu {
 
     while ($true) {
         Show-TerminalSetupMenu `
+            -InitialInfoLines $InitialInfoLines `
             -ProfileOptions $profileOptions `
             -StepOptions $stepOptions `
             -Items $items `
