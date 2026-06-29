@@ -1,7 +1,7 @@
 Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
 
 # Checks the Java compiler and runtime installation.
-# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, JavaHome, and Errors fields
+# [output-param] PSCustomObject: report with Name, Installed, InPath, Version, JavaHome, JavaExecutable, and Errors fields
 # [side-effect] Runs javac/java, reads JAVA_HOME and PATH, and searches common installation directories.
 function Get-JavaInstallationReport {
     $result = [PSCustomObject]@{
@@ -10,6 +10,7 @@ function Get-JavaInstallationReport {
         InPath = $false
         Version = $null
         JavaHome = $null
+        JavaExecutable = $null
         Errors = (New-Object System.Collections.Generic.List[string])
     }
 
@@ -88,6 +89,7 @@ function Get-JavaInstallationReport {
      # - Sprawdzenie instalacji i wersji
     if ($javaExePath) {
         $result.Installed = $true
+        $result.JavaExecutable = $javaExePath
 
         try {
             # java -version pisze na stderr, dlatego przekierowujemy 2>&1
@@ -133,6 +135,7 @@ function Get-JavaInstallationReport {
             $best  = if ($javac) { $javac } else { $java }
 
             $result.Installed = $true
+            $result.JavaExecutable = $best.FullPath
             $result.Errors.Add("Znaleziono '$($best.CompilerName).exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie '$($best.Directory)' do zmiennych środowiskowych.")
             }
 

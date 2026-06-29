@@ -1,7 +1,7 @@
 # Copies terminal profile icon resources next to Windows Terminal settings.json.
 # [input-param] SettingsPath: resolved path to Windows Terminal settings.json
 # [input-param] ResourcesPath: optional path to the directory containing icon resources
-# [output-param] hashtable: icon paths keyed by supported profile type: git, node, and python
+# [output-param] hashtable: icon paths keyed by supported profile type: git, node, python, and java
 # [side-effect] Creates the icons directory next to settings.json and copies matching icon files when they are missing.
 function Copy-TerminalProfileIcons {
     param(
@@ -39,13 +39,14 @@ function Copy-TerminalProfileIcons {
     }
 
     $iconsMap = @{}
-    $resources = Get-ChildItem -Path $ResourcesPath -File | Where-Object { $_.Name -match '(?i)(git|node|python)' } | Sort-Object -Property Name
+    $resources = Get-ChildItem -Path $ResourcesPath -File | Where-Object { $_.Name -match '(?i)(git|node|python|java)' } | Sort-Object -Property Name
 
     foreach ($resource in $resources) {
         $profileType = $null
         if ($resource.Name -match '(?i)git') { $profileType = 'git' }
         elseif ($resource.Name -match '(?i)node') { $profileType = 'node' }
         elseif ($resource.Name -match '(?i)python') { $profileType = 'python' }
+        elseif ($resource.Name -match '(?i)java') { $profileType = 'java' }
 
         if (-not $profileType) {
             continue

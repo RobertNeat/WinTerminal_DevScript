@@ -9,17 +9,17 @@ Import-Module ".\modules\_Tests\Test-CmdProfile.psm1" -ErrorAction Stop
 Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
 
 # Normalizes the Windows Terminal profile list and adds developer tool profiles.
-# [input-param] ExecutablesMap: map of executable paths; supported keys are git, node, and python
+# [input-param] ExecutablesMap: map of executable paths; supported keys are git, node, python, and java
 # [input-param] SettingsObject: object from Get-TerminalConfiguration or parsed settings.json; when empty, the configuration is loaded automatically
 # [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
 # [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
 # [output-param] object: the same SettingsObject after modification
-# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, and Python when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
+# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, Python, and Java when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(
-        # input: list of executables to add (git bash, node, python)
-        # expected keys: git, node, python
+        # input: list of executables to add (git bash, node, python, java)
+        # expected keys: git, node, python, java
         [Parameter(Mandatory = $true)]
         [hashtable] $ExecutablesMap,
 
@@ -89,7 +89,7 @@ function Set-TerminalProfiles {
     if (-not $hasWinPS) { [void]$kept.Add([pscustomobject]@{ name = 'Windows PowerShell'; commandline = 'powershell.exe'; hidden = $false }) }
     if (-not $hasCmd) { [void]$kept.Add([pscustomobject]@{ name = 'Command Prompt'; commandline = 'cmd.exe'; hidden = $false }) }
 
-    # Step 2: add Git Bash / Node / Python (only when the executable exists)
+    # Step 2: add Git Bash / Node / Python / Java (only when the executable exists)
 
     $gitExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['git']) -FallbackRelativePaths @(
         'usr\bin\bash.exe',
@@ -127,6 +127,28 @@ function Set-TerminalProfiles {
         }
     } else {
         Write-Verbose "Python profile not added (path missing or not found)."
+    }
+
+    $javaExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['java']) -FallbackRelativePaths @('bin\jshell.exe', 'bin\java.exe', 'jshell.exe', 'java.exe')
+    if ($javaExe) {
+        $javaProfileExe = $javaExe
+        $javaExeDirectory = Split-Path -Path $javaExe -Parent
+        $javaExeLeaf = Split-Path -Path $javaExe -Leaf
+        $jshellCandidate = Join-Path -Path $javaExeDirectory -ChildPath 'jshell.exe'
+        $runtimeCandidate = Join-Path -Path $javaExeDirectory -ChildPath 'java.exe'
+
+        if (Test-Path -LiteralPath $jshellCandidate) {
+            $javaProfileExe = (Resolve-Path -LiteralPath $jshellCandidate).Path
+        } elseif (($javaExeLeaf -ieq 'javac.exe') -and (Test-Path -LiteralPath $runtimeCandidate)) {
+            $javaProfileExe = (Resolve-Path -LiteralPath $runtimeCandidate).Path
+        }
+
+        Update-Profile -Profiles $kept -Name 'Java' -CommandLine ('"{0}"' -f $javaProfileExe)
+        if ($profileIcons.ContainsKey('java')) {
+            [void](Set-TerminalProfileIcon -Profiles $kept -Name 'Java' -IconPath $profileIcons['java'])
+        }
+    } else {
+        Write-Verbose "Java profile not added (path missing or not found)."
     }
 
     # In-place update (same object instance)
