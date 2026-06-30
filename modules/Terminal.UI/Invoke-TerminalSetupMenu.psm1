@@ -22,7 +22,7 @@ function Invoke-TerminalSetupMenu {
         New-TerminalSetupOption -Key 'colorSchemes' -Label 'Apply profiles color schemes' -Group 'Step'
         New-TerminalSetupOption -Key 'profileSettings' -Label 'Apply additional profile settings (showMarksOnScrollbar, autoMarkPrompts, PowerShell -NoLogo)' -Group 'Step'
         New-TerminalSetupOption -Key 'terminalSettings' -Label 'Apply additional terminal settings (tabWidthMode, searchWebDefaultQueryUrl)' -Group 'Step'
-        New-TerminalSetupOption -Key 'ohMyPosh' -Label 'Install or upgrade Oh My Posh and configure the PowerShell profile' -Group 'Step'
+        New-TerminalSetupOption -Key 'ohMyPosh' -Label 'Install/configure Oh My Posh (requires approved internet downloads)' -Group 'Step'
     )
 
     $items = @($profileOptions + $stepOptions)

@@ -1,8 +1,11 @@
+$projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+Import-Module (Join-Path $projectRoot 'modules\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
+
 # Installs a Nerd Font directly from the official Nerd Fonts release archive.
 # [input-param] Name: Nerd Fonts archive font name, for example FiraCode
-# [input-param] Scope: font installation scope passed to Fonts\Install-Font
+# [input-param] Scope: font installation scope
 # [output-param] None.
-# [side-effect] Downloads a Nerd Fonts archive, extracts it, installs contained font files, and removes temporary files.
+# [side-effect] Downloads a Nerd Fonts archive, extracts it, registers contained font files, and removes temporary files.
 function Install-NerdFontFromArchive {
     param(
         [string] $Name,
@@ -11,27 +14,53 @@ function Install-NerdFontFromArchive {
         [string] $Scope = 'CurrentUser'
     )
 
-    function Import-FontsModule {
-        if (-not (Get-Module -ListAvailable -Name Fonts)) {
-            Install-PSResource -Name Fonts -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+    function Install-FontFile {
+        param(
+            [System.IO.FileInfo] $FontFile,
+            [string] $InstallScope
+        )
+
+        $extension = $FontFile.Extension.ToLowerInvariant()
+        $fontType = if ($extension -eq '.otf') { 'OpenType' } else { 'TrueType' }
+        $registryName = '{0} ({1})' -f $FontFile.BaseName, $fontType
+
+        if ($InstallScope -eq 'AllUsers') {
+            $targetDirectory = Join-Path $env:WINDIR 'Fonts'
+            $registryPath = 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+            $registryValue = $FontFile.Name
+        } else {
+            $targetDirectory = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+            $registryPath = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+            $registryValue = Join-Path $targetDirectory $FontFile.Name
         }
 
-        Import-Module -Name Fonts -Force -ErrorAction Stop
-        if (-not (Get-Command -Name 'Fonts\Install-Font' -ErrorAction SilentlyContinue)) {
-            throw 'The Fonts module could not be imported.'
+        if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
         }
+
+        Copy-Item -LiteralPath $FontFile.FullName -Destination (Join-Path $targetDirectory $FontFile.Name) -Force
+        New-ItemProperty -Path $registryPath -Name $registryName -Value $registryValue -PropertyType String -Force | Out-Null
     }
-
-    Import-FontsModule
 
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('Setup-Terminal-NerdFont-' + [guid]::NewGuid().ToString('N'))
     $archivePath = Join-Path $tempRoot ($Name + '.zip')
     $extractPath = Join-Path $tempRoot 'extracted'
+    $downloadUri = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$Name.zip"
+
+    $downloadApproved = Request-SetupTerminalConsent `
+        -Title "Download Nerd Font archive: $Name" `
+        -Description 'The setup will download a font archive before any font files are installed.' `
+        -Sources @($downloadUri) `
+        -Consequence "The archive will be stored temporarily under '$tempRoot' and removed after installation." `
+        -DefaultNo
+
+    if (-not $downloadApproved) {
+        throw "Nerd Font download was skipped by the user: $Name"
+    }
 
     New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
 
     try {
-        $downloadUri = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$Name.zip"
         Invoke-WebRequest -Uri $downloadUri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
         Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force
 
@@ -40,7 +69,20 @@ function Install-NerdFontFromArchive {
             throw "No font files were found in $downloadUri."
         }
 
-        Fonts\Install-Font -Path $extractPath -Scope $Scope -Force
+        $installApproved = Request-SetupTerminalConsent `
+            -Title "Install downloaded Nerd Font files: $Name" `
+            -Description ("The archive was downloaded and extracted. The setup found {0} font file(s)." -f $fontFiles.Count) `
+            -Sources @($downloadUri) `
+            -Consequence "The font files will be registered with Windows using scope '$Scope'." `
+            -DefaultNo
+
+        if (-not $installApproved) {
+            throw "Nerd Font installation was skipped by the user after download: $Name"
+        }
+
+        foreach ($fontFile in $fontFiles) {
+            Install-FontFile -FontFile $fontFile -InstallScope $Scope
+        }
     } finally {
         if (Test-Path -LiteralPath $tempRoot) {
             Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue

@@ -1,5 +1,6 @@
 Import-Module ".\modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1" -ErrorAction Stop
 Import-Module ".\modules\PowerShell.OhMyPosh\Set-OhMyPoshThemePerformanceOptions.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.UI\Request-SetupTerminalConsent.psm1" -ErrorAction Stop
 
 # Sets the Oh My Posh theme selection used by the PowerShell profile.
 # [input-param] ThemeName: theme file name to apply
@@ -20,7 +21,18 @@ function Set-OhMyPoshTheme {
         New-Item -ItemType Directory -Path $themeDirectory -Force | Out-Null
     }
 
+    $downloadApproved = Request-SetupTerminalConsent `
+        -Title 'Download Oh My Posh theme' `
+        -Description "The setup will download the '$ThemeName' theme file and store it in the project resources directory." `
+        -Sources @($ThemeUrl) `
+        -Consequence "The downloaded theme will be saved to '$themePath' and used by the PowerShell profile." `
+        -DefaultNo
+
     try {
+        if (-not $downloadApproved) {
+            throw 'Theme download was skipped by the user.'
+        }
+
         Write-Host "Downloading Oh My Posh theme: $ThemeName"
         Invoke-WebRequest -Uri $ThemeUrl -OutFile $themePath -UseBasicParsing -ErrorAction Stop
     } catch {

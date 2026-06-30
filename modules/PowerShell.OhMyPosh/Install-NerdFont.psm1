@@ -46,36 +46,10 @@ function Install-NerdFont {
 
 `$moduleDirectory = $moduleDirectoryLiteral
 Import-Module (Join-Path `$moduleDirectory 'Test-NerdFontInstalled.psm1') -Force -ErrorAction Stop
-Import-Module (Join-Path `$moduleDirectory 'Test-NerdFontsModuleReady.psm1') -Force -ErrorAction Stop
-Import-Module (Join-Path `$moduleDirectory 'Remove-BrokenNerdFontsModule.psm1') -Force -ErrorAction Stop
 Import-Module (Join-Path `$moduleDirectory 'Install-NerdFontFromArchive.psm1') -Force -ErrorAction Stop
 
-if (-not (Get-Command Install-PSResource -ErrorAction SilentlyContinue)) {
-    if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
-        throw 'Install-PSResource or Install-Module is required to install the NerdFonts module.'
-    }
-
-    Install-Module -Name Microsoft.PowerShell.PSResourceGet -Scope CurrentUser -Force -AllowClobber
-    Import-Module Microsoft.PowerShell.PSResourceGet -ErrorAction Stop
-}
-
-`$canUseNerdFontsModule = Test-NerdFontsModuleReady
-if (-not `$canUseNerdFontsModule) {
-    try {
-        Remove-BrokenNerdFontsModule
-        Install-PSResource -Name NerdFonts -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
-        `$canUseNerdFontsModule = Test-NerdFontsModuleReady
-    } catch {
-        `$canUseNerdFontsModule = `$false
-    }
-}
-
 if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceLiteral)) {
-    if (`$canUseNerdFontsModule) {
-        NerdFonts\Install-NerdFont -Name $nameLiteral -Scope $scopeLiteral -Force
-    } else {
-        Install-NerdFontFromArchive -Name $nameLiteral -Scope $scopeLiteral
-    }
+    Install-NerdFontFromArchive -Name $nameLiteral -Scope $scopeLiteral
 }
 
 if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceLiteral)) {
@@ -149,7 +123,19 @@ if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceL
                 -ExpectedFontFace $FontFace `
                 -InstallScope 'CurrentUser' `
                 -ModuleDirectory $PSScriptRoot))
-            & $scriptBlock
+            try {
+                & $scriptBlock
+            } catch {
+                $status = if ($_.Exception.Message -like '*skipped by the user*') { 'skipped-by-user' } else { 'failed' }
+                [PSCustomObject]@{
+                    FontName = $FontName
+                    FontFace = $FontFace
+                    Scope    = 'CurrentUser'
+                    Status   = $status
+                    ExitCode = 1
+                }
+                return
+            }
             $Scope = 'CurrentUser'
             $exitCode = 0
         }
@@ -160,7 +146,19 @@ if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceL
             -ExpectedFontFace $FontFace `
             -InstallScope $Scope `
             -ModuleDirectory $PSScriptRoot))
-        & $scriptBlock
+        try {
+            & $scriptBlock
+        } catch {
+            $status = if ($_.Exception.Message -like '*skipped by the user*') { 'skipped-by-user' } else { 'failed' }
+            [PSCustomObject]@{
+                FontName = $FontName
+                FontFace = $FontFace
+                Scope    = $Scope
+                Status   = $status
+                ExitCode = 1
+            }
+            return
+        }
         $exitCode = 0
     }
 

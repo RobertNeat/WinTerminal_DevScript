@@ -180,17 +180,25 @@ try {
         $ohMyPoshInstallation = Install-OhMyPosh
         Write-Output "Oh My Posh $($ohMyPoshInstallation.Action) status: $($ohMyPoshInstallation.Status) (exit code: $($ohMyPoshInstallation.ExitCode))"
 
-        $fontInstallation = Install-NerdFont -FontName 'FiraCode' -Scope AllUsers
-        Write-Output "Nerd Font $($fontInstallation.FontName) status: $($fontInstallation.Status) (exit code: $($fontInstallation.ExitCode))"
+        if ($ohMyPoshInstallation.Status -eq 'skipped-by-user' -and -not (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
+            Write-Output 'Oh My Posh configuration skipped because the package installation was not approved.'
+        } else {
+            $fontInstallation = Install-NerdFont -FontName 'FiraCode' -Scope AllUsers
+            Write-Output "Nerd Font $($fontInstallation.FontName) status: $($fontInstallation.Status) (exit code: $($fontInstallation.ExitCode))"
 
-        $themePath = [string](Set-OhMyPoshTheme -ThemeName 'marcduiker.omp.json' | Select-Object -Last 1)
-        $updatedProfiles = Set-PowershellProfile -ThemePath $themePath
-        foreach ($updatedProfile in $updatedProfiles) {
-            Write-Output "PowerShell profile updated: $($updatedProfile.ProfilePath)"
+            if ($fontInstallation.Status -eq 'skipped-by-user' -or $fontInstallation.Status -eq 'failed') {
+                Write-Output 'PowerShell profile configuration skipped because Nerd Font installation was not completed.'
+            } else {
+                $themePath = [string](Set-OhMyPoshTheme -ThemeName 'marcduiker.omp.json' | Select-Object -Last 1)
+                $updatedProfiles = Set-PowershellProfile -ThemePath $themePath
+                foreach ($updatedProfile in $updatedProfiles) {
+                    Write-Output "PowerShell profile updated: $($updatedProfile.ProfilePath)"
+                }
+
+                $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace $fontInstallation.FontFace
+                Write-Output "Windows Terminal default font set to: $($fontInstallation.FontFace)"
+            }
         }
-
-        $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace $fontInstallation.FontFace
-        Write-Output "Windows Terminal default font set to: $($fontInstallation.FontFace)"
     }
 
     # 9. Save the updated configuration back to settings.json
