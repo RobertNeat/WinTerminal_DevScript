@@ -1,10 +1,10 @@
 Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
 
-# Sets the default font face for Windows Terminal profiles.
+# Sets the default font face for Windows Terminal profiles and PowerShell profiles.
 # [input-param] Configuration: configuration object or wrapper containing Settings and TerminalVersion
 # [input-param] FontFace: Windows Terminal font face name to write under profiles.defaults.font.face
 # [output-param] PSCustomObject: the same Configuration object after modification
-# [side-effect] Modifies profiles.defaults.font.face in memory.
+# [side-effect] Modifies profiles.defaults.font.face and PowerShell profile font faces in memory.
 function Set-TerminalDefaultFont {
     param(
         [Parameter(Mandatory = $true)]
@@ -34,6 +34,28 @@ function Set-TerminalDefaultFont {
         $settingsRoot.profiles.defaults.font.face = $FontFace
     } else {
         $settingsRoot.profiles.defaults.font | Add-Member -MemberType NoteProperty -Name 'face' -Value $FontFace -Force
+    }
+
+    $profileList = @($settingsRoot.profiles.list)
+    foreach ($profile in $profileList) {
+        if (-not $profile) { continue }
+
+        $profileName = [string] $profile.name
+        $profileCommandLine = [string] $profile.commandline
+        $isPowerShellProfile = (
+            $profileName -match 'PowerShell' -or
+            $profileCommandLine -match '(?i)(^|[\\"])pwsh(\.exe)?([\\"]|\\s|$)' -or
+            $profileCommandLine -match '(?i)(^|[\\"])powershell(\.exe)?([\\"]|\\s|$)'
+        )
+
+        if (-not $isPowerShellProfile) { continue }
+
+        Initialize-NoteProperty -Object $profile -Name 'font' -DefaultValue ([pscustomobject]@{})
+        if ($profile.font.PSObject.Properties.Name -contains 'face') {
+            $profile.font.face = $FontFace
+        } else {
+            $profile.font | Add-Member -MemberType NoteProperty -Name 'face' -Value $FontFace -Force
+        }
     }
 
     return $Configuration

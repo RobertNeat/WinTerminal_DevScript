@@ -26,63 +26,22 @@ function Set-PowershellProfile {
     $beginMarker = '# BEGIN Setup-Terminal Oh My Posh'
     $endMarker = '# END Setup-Terminal Oh My Posh'
     $themeLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value $ThemePath
+    $dailyStatusModuleLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value (Join-Path $PSScriptRoot 'Get-DailySystemStatus.psm1')
+    $interactiveProfileModuleLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value (Join-Path $PSScriptRoot 'Test-SetupTerminalInteractiveProfile.psm1')
 
     $profileBlock = @"
 $beginMarker
-function Get-DailySystemStatus {
-    function Get-UsageBar {
-        param(
-            [double]`$Percent,
-            [int]`$Width = 20
-        )
+`$setupTerminalOhMyPoshTheme = $themeLiteral
+Import-Module $dailyStatusModuleLiteral -Force -ErrorAction Stop
+Import-Module $interactiveProfileModuleLiteral -Force -ErrorAction Stop
 
-        if (`$Percent -lt 0) { `$Percent = 0 }
-        if (`$Percent -gt 100) { `$Percent = 100 }
-
-        `$filled = [math]::Round((`$Percent / 100) * `$Width)
-        `$empty = `$Width - `$filled
-
-        return "[" + ("#" * `$filled) + ("-" * `$empty) + "]"
+if (Test-SetupTerminalInteractiveProfile) {
+    if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
+        oh-my-posh init pwsh --config `$setupTerminalOhMyPoshTheme | Invoke-Expression
     }
 
-    `$os = Get-CimInstance Win32_OperatingSystem
-    `$cpu = Get-CimInstance Win32_Processor |
-        Measure-Object -Property LoadPercentage -Average
-
-    `$cpuPct = [math]::Round(`$cpu.Average, 1)
-
-    `$totalRam = [math]::Round(`$os.TotalVisibleMemorySize / 1MB, 1)
-    `$freeRam = [math]::Round(`$os.FreePhysicalMemory / 1MB, 1)
-    `$usedRam = [math]::Round(`$totalRam - `$freeRam, 1)
-    `$ramPct = [math]::Round((`$usedRam / `$totalRam) * 100, 1)
-
-    `$disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"
-
-    `$diskText = `$disks |
-        ForEach-Object {
-            `$usedPct = [math]::Round(((`$_.Size - `$_.FreeSpace) / `$_.Size) * 100, 1)
-            "`$(`$_.DeviceID) `$usedPct% used"
-        }
-
-    `$avgDiskPct = (`$disks |
-        ForEach-Object {
-            ((`$_.Size - `$_.FreeSpace) / `$_.Size) * 100
-        } |
-        Measure-Object -Average).Average
-
-    `$avgDiskPct = [math]::Round(`$avgDiskPct, 1)
-
-    Write-Host ("{0} CPU:  {1}% load" -f (Get-UsageBar `$cpuPct), `$cpuPct)
-    Write-Host ("{0} RAM:  {1} GB / {2} GB used ({3}%)" -f (Get-UsageBar `$ramPct), `$usedRam, `$totalRam, `$ramPct)
-    Write-Host ("{0} Disk: {1}" -f (Get-UsageBar `$avgDiskPct), (`$diskText -join " | "))
+    Get-DailySystemStatus
 }
-
-`$setupTerminalOhMyPoshTheme = $themeLiteral
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --config `$setupTerminalOhMyPoshTheme | Invoke-Expression
-}
-
-Get-DailySystemStatus
 $endMarker
 "@
 

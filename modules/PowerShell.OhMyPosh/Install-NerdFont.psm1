@@ -1,11 +1,16 @@
-# Installs a Nerd Font through the NerdFonts PowerShell module.
-# [input-param] FontName: NerdFonts module font name to install
-# [input-param] Scope: install scope passed to NerdFonts; AllUsers requires elevation
-# [output-param] PSCustomObject: font name, scope, and installation status
-# [side-effect] Installs the NerdFonts PowerShell resource when missing and installs the requested Nerd Font.
+Import-Module "$PSScriptRoot\Test-NerdFontInstalled.psm1" -ErrorAction Stop
+
+# Installs a Nerd Font through NerdFonts or the official Nerd Fonts archive fallback.
+# [input-param] FontName: NerdFonts module/archive font name to install
+# [input-param] FontFace: expected Windows font face name used by Windows Terminal
+# [input-param] Scope: install scope; AllUsers requires elevation
+# [output-param] PSCustomObject: font name, font face, scope, installation status, and exit code
+# [side-effect] Installs PowerShell helper modules when missing and installs the requested Nerd Font.
 function Install-NerdFont {
     param(
         [string] $FontName = 'FiraCode',
+
+        [string] $FontFace = 'FiraCode Nerd Font',
 
         [ValidateSet('CurrentUser', 'AllUsers')]
         [string] $Scope = 'AllUsers'
@@ -17,18 +22,33 @@ function Install-NerdFont {
         return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     }
 
+    function ConvertTo-SingleQuotedPowerShellLiteral {
+        param([string] $Value)
+        return "'" + ($Value -replace "'", "''") + "'"
+    }
+
     function New-NerdFontInstallScript {
         param(
             [string] $Name,
-            [string] $InstallScope
+            [string] $ExpectedFontFace,
+            [string] $InstallScope,
+            [string] $ModuleDirectory
         )
 
-        $escapedName = $Name -replace "'", "''"
-        $escapedScope = $InstallScope -replace "'", "''"
+        $nameLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value $Name
+        $fontFaceLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value $ExpectedFontFace
+        $scopeLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value $InstallScope
+        $moduleDirectoryLiteral = ConvertTo-SingleQuotedPowerShellLiteral -Value $ModuleDirectory
 
         return @"
 `$ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+`$moduleDirectory = $moduleDirectoryLiteral
+Import-Module (Join-Path `$moduleDirectory 'Test-NerdFontInstalled.psm1') -Force -ErrorAction Stop
+Import-Module (Join-Path `$moduleDirectory 'Test-NerdFontsModuleReady.psm1') -Force -ErrorAction Stop
+Import-Module (Join-Path `$moduleDirectory 'Remove-BrokenNerdFontsModule.psm1') -Force -ErrorAction Stop
+Import-Module (Join-Path `$moduleDirectory 'Install-NerdFontFromArchive.psm1') -Force -ErrorAction Stop
 
 if (-not (Get-Command Install-PSResource -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
@@ -39,13 +59,40 @@ if (-not (Get-Command Install-PSResource -ErrorAction SilentlyContinue)) {
     Import-Module Microsoft.PowerShell.PSResourceGet -ErrorAction Stop
 }
 
-if (-not (Get-Module -ListAvailable -Name NerdFonts)) {
-    Install-PSResource -Name NerdFonts -Scope CurrentUser -TrustRepository -Reinstall
+`$canUseNerdFontsModule = Test-NerdFontsModuleReady
+if (-not `$canUseNerdFontsModule) {
+    try {
+        Remove-BrokenNerdFontsModule
+        Install-PSResource -Name NerdFonts -Scope CurrentUser -TrustRepository -Reinstall -ErrorAction Stop
+        `$canUseNerdFontsModule = Test-NerdFontsModuleReady
+    } catch {
+        `$canUseNerdFontsModule = `$false
+    }
 }
 
-Import-Module -Name NerdFonts -ErrorAction Stop
-NerdFonts\Install-NerdFont -Name '$escapedName' -Scope '$escapedScope'
+if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceLiteral)) {
+    if (`$canUseNerdFontsModule) {
+        NerdFonts\Install-NerdFont -Name $nameLiteral -Scope $scopeLiteral -Force
+    } else {
+        Install-NerdFontFromArchive -Name $nameLiteral -Scope $scopeLiteral
+    }
+}
+
+if (-not (Test-NerdFontInstalled -Name $nameLiteral -ExpectedFontFace $fontFaceLiteral)) {
+    throw "Nerd Font installation completed, but Windows does not report font face $fontFaceLiteral."
+}
 "@
+    }
+
+    if (Test-NerdFontInstalled -Name $FontName -ExpectedFontFace $FontFace) {
+        [PSCustomObject]@{
+            FontName = $FontName
+            FontFace = $FontFace
+            Scope    = 'Existing'
+            Status   = 'installed'
+            ExitCode = 0
+        }
+        return
     }
 
     $isAdministrator = Test-CurrentProcessAdministrator
@@ -53,7 +100,11 @@ NerdFonts\Install-NerdFont -Name '$escapedName' -Scope '$escapedScope'
 
     if ($needsElevation) {
         $scriptPath = Join-Path ([System.IO.Path]::GetTempPath()) ('Install-NerdFont-{0}.ps1' -f ([guid]::NewGuid().ToString('N')))
-        $script = New-NerdFontInstallScript -Name $FontName -InstallScope $Scope
+        $script = New-NerdFontInstallScript `
+            -Name $FontName `
+            -ExpectedFontFace $FontFace `
+            -InstallScope $Scope `
+            -ModuleDirectory $PSScriptRoot
         Set-Content -LiteralPath $scriptPath -Value $script -Encoding UTF8
 
         $uacAccepted = $true
@@ -93,14 +144,22 @@ NerdFonts\Install-NerdFont -Name '$escapedName' -Scope '$escapedScope'
 
         if ((-not $uacAccepted) -or $fallbackToCurrentUser) {
             Write-Host "Installing Nerd Font $FontName with scope CurrentUser"
-            $scriptBlock = [scriptblock]::Create((New-NerdFontInstallScript -Name $FontName -InstallScope 'CurrentUser'))
+            $scriptBlock = [scriptblock]::Create((New-NerdFontInstallScript `
+                -Name $FontName `
+                -ExpectedFontFace $FontFace `
+                -InstallScope 'CurrentUser' `
+                -ModuleDirectory $PSScriptRoot))
             & $scriptBlock
             $Scope = 'CurrentUser'
             $exitCode = 0
         }
     } else {
         Write-Host "Installing Nerd Font $FontName with scope $Scope"
-        $scriptBlock = [scriptblock]::Create((New-NerdFontInstallScript -Name $FontName -InstallScope $Scope))
+        $scriptBlock = [scriptblock]::Create((New-NerdFontInstallScript `
+            -Name $FontName `
+            -ExpectedFontFace $FontFace `
+            -InstallScope $Scope `
+            -ModuleDirectory $PSScriptRoot))
         & $scriptBlock
         $exitCode = 0
     }
@@ -109,6 +168,7 @@ NerdFonts\Install-NerdFont -Name '$escapedName' -Scope '$escapedScope'
 
     [PSCustomObject]@{
         FontName = $FontName
+        FontFace = $FontFace
         Scope    = $Scope
         Status   = $status
         ExitCode = $exitCode

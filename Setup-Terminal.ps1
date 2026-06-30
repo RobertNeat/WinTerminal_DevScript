@@ -189,8 +189,8 @@ try {
             Write-Output "PowerShell profile updated: $($updatedProfile.ProfilePath)"
         }
 
-        $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace 'FiraCode Nerd Font'
-        Write-Output "Windows Terminal default font set to: FiraCode Nerd Font"
+        $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace $fontInstallation.FontFace
+        Write-Output "Windows Terminal default font set to: $($fontInstallation.FontFace)"
     }
 
     # 9. Save the updated configuration back to settings.json

@@ -1,4 +1,5 @@
 Import-Module ".\modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1" -ErrorAction Stop
+Import-Module ".\modules\PowerShell.OhMyPosh\Set-OhMyPoshThemePerformanceOptions.psm1" -ErrorAction Stop
 
 # Sets the Oh My Posh theme selection used by the PowerShell profile.
 # [input-param] ThemeName: theme file name to apply
@@ -43,6 +44,8 @@ function Set-OhMyPoshTheme {
             $themeJson | Set-Content -LiteralPath $themePath -Encoding UTF8
         }
     }
+
+    Set-OhMyPoshThemePerformanceOptions -Path $themePath
 
     $themePath = (Resolve-Path -LiteralPath $themePath).Path
     Write-Host "Oh My Posh theme selected: $themePath"
