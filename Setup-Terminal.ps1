@@ -25,6 +25,7 @@ Import-Module ".\modules\Terminal.IO\Add-TerminalSettings.psm1" -ErrorAction Sto
 Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfiles.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1" -ErrorAction Stop
+Import-Module ".\modules\Terminal.Profiles\Set-TerminalDefaultFont.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.Themes\Set-TerminalColorSchemes.psm1" -ErrorAction Stop
 Import-Module ".\modules\Terminal.UI\Invoke-TerminalSetupMenu.psm1" -ErrorAction Stop
 
@@ -35,7 +36,11 @@ Import-Module ".\modules\DevTools.Checkers\Get-NodeRuntimeReport.psm1"
 Import-Module ".\modules\DevTools.Checkers\Get-GitInstallationReport.psm1"
 
 # PowerShell profile / prompt configuration
-Import-Module ".\powershell_config_setters\set_oh_my_posh_for_powershell.psm1"
+Import-Module ".\modules\PowerShell.OhMyPosh\Install-OhMyPosh.psm1" -ErrorAction Stop
+Import-Module ".\modules\PowerShell.OhMyPosh\Install-NerdFont.psm1" -ErrorAction Stop
+Import-Module ".\modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1" -ErrorAction Stop
+Import-Module ".\modules\PowerShell.OhMyPosh\Set-OhMyPoshTheme.psm1" -ErrorAction Stop
+Import-Module ".\modules\PowerShell.OhMyPosh\Set-PowershellProfile.psm1" -ErrorAction Stop
 
 # System information shown at the beginning of the setup.
 $os = (Get-CimInstance Win32_OperatingSystem).Caption
@@ -61,14 +66,14 @@ $homePath = $HOME
 $currentPath = (Get-Location).Path
 
 function print_initial_info {
-    Write-Output "💻 Informacje o systemie operacyjnym: $full_Windows_Version"
-    Write-Output "Informacje o systemie (CPU, RAM, Disk):"
+    Write-Output "💻 Operating system information: $full_Windows_Version"
+    Write-Output "System information (CPU, RAM, Disk):"
     Write-Output " - CPU: $cpu"
     Write-Output " - RAM: $ram_Summary"
     Write-Output " - Disk: $disk_summary"
-    Write-Output "Wersja PowerShell: $powershellVersion"
-    Write-Output "Ścieżka do katalogu domowego: $homePath"
-    Write-Output "Ścieżka do aktualnego katalogu: $currentPath"
+    Write-Output "PowerShell version: $powershellVersion"
+    Write-Output "Path to home directory: $homePath"
+    Write-Output "Path to current directory: $currentPath"
     Write-Output ""
 }
 
@@ -170,7 +175,25 @@ try {
     }
     #[debug] Write-Output $terminalParams.settings | Format-List
 
-    # 8. Save the updated configuration back to settings.json
+    # 8. Install and configure Oh My Posh for PowerShell
+    if ($selectedSteps -contains 'ohMyPosh') {
+        $ohMyPoshInstallation = Install-OhMyPosh
+        Write-Output "Oh My Posh $($ohMyPoshInstallation.Action) status: $($ohMyPoshInstallation.Status) (exit code: $($ohMyPoshInstallation.ExitCode))"
+
+        $fontInstallation = Install-NerdFont -FontName 'FiraCode' -Scope AllUsers
+        Write-Output "Nerd Font $($fontInstallation.FontName) status: $($fontInstallation.Status) (exit code: $($fontInstallation.ExitCode))"
+
+        $themePath = [string](Set-OhMyPoshTheme -ThemeName 'marcduiker.omp.json' | Select-Object -Last 1)
+        $updatedProfiles = Set-PowershellProfile -ThemePath $themePath
+        foreach ($updatedProfile in $updatedProfiles) {
+            Write-Output "PowerShell profile updated: $($updatedProfile.ProfilePath)"
+        }
+
+        $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace 'FiraCode Nerd Font'
+        Write-Output "Windows Terminal default font set to: FiraCode Nerd Font"
+    }
+
+    # 9. Save the updated configuration back to settings.json
     $savedConfig = Save-TerminalConfiguration -Configuration $terminalParams -SettingsPath $terminal_settings_path
     Write-Output "✅ Windows Terminal configuration saved to: $($savedConfig.SettingsPath)"
 }
