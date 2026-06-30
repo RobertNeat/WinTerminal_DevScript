@@ -88,6 +88,7 @@ try {
 
     $selectedProfiles = @($setupSelection.Profiles)
     $selectedSteps = @($setupSelection.Steps)
+    $changedLocations = New-Object System.Collections.Generic.List[string]
 
     $executables_map = [ordered]@{}
 
@@ -131,6 +132,8 @@ try {
     $configTerminalProfiles = $config
     if ($selectedSteps -contains 'profiles') {
         $configTerminalProfiles = Set-TerminalProfiles -ExecutablesMap $executables_map -SettingsObject $config -SettingsPath $terminal_settings_path
+        $terminalSettingsDirectory = Split-Path -Path $terminal_settings_path -Parent
+        [void]$changedLocations.Add("✅ Windows Terminal profile icons copied/updated in: $(Join-Path -Path $terminalSettingsDirectory -ChildPath 'icons')")
     }
     #[debug] Write-Output $configTerminalProfiles | Format-List
     #[debug] Write-Output $configTerminalProfiles.settings | Format-List
@@ -178,32 +181,32 @@ try {
     # 8. Install and configure Oh My Posh for PowerShell
     if ($selectedSteps -contains 'ohMyPosh') {
         $ohMyPoshInstallation = Install-OhMyPosh
-        Write-Output "Oh My Posh $($ohMyPoshInstallation.Action) status: $($ohMyPoshInstallation.Status) (exit code: $($ohMyPoshInstallation.ExitCode))"
 
-        if ($ohMyPoshInstallation.Status -eq 'skipped-by-user' -and -not (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
-            Write-Output 'Oh My Posh configuration skipped because the package installation was not approved.'
-        } else {
+        if (-not ($ohMyPoshInstallation.Status -eq 'skipped-by-user' -and -not (Get-Command oh-my-posh -ErrorAction SilentlyContinue))) {
             $fontInstallation = Install-NerdFont -FontName 'FiraCode' -Scope AllUsers
-            Write-Output "Nerd Font $($fontInstallation.FontName) status: $($fontInstallation.Status) (exit code: $($fontInstallation.ExitCode))"
 
-            if ($fontInstallation.Status -eq 'skipped-by-user' -or $fontInstallation.Status -eq 'failed') {
-                Write-Output 'PowerShell profile configuration skipped because Nerd Font installation was not completed.'
-            } else {
-                $themePath = [string](Set-OhMyPoshTheme -ThemeName 'marcduiker.omp.json' | Select-Object -Last 1)
+            if (-not ($fontInstallation.Status -eq 'skipped-by-user' -or $fontInstallation.Status -eq 'failed')) {
+                $themeDirectory = Split-Path -Path $terminal_settings_path -Parent
+                $themePath = [string](Set-OhMyPoshTheme -ThemeName 'marcduiker.omp.json' -ThemeDirectory $themeDirectory | Select-Object -Last 1)
+                [void]$changedLocations.Add("✅ Oh My Posh theme copied/updated at: $themePath")
                 $updatedProfiles = Set-PowershellProfile -ThemePath $themePath
                 foreach ($updatedProfile in $updatedProfiles) {
-                    Write-Output "PowerShell profile updated: $($updatedProfile.ProfilePath)"
+                    [void]$changedLocations.Add("✅ PowerShell profile updated: $($updatedProfile.ProfilePath)")
                 }
 
                 $terminalParams = Set-TerminalDefaultFont -Configuration $terminalParams -FontFace $fontInstallation.FontFace
-                Write-Output "Windows Terminal default font set to: $($fontInstallation.FontFace)"
             }
         }
     }
 
     # 9. Save the updated configuration back to settings.json
     $savedConfig = Save-TerminalConfiguration -Configuration $terminalParams -SettingsPath $terminal_settings_path
-    Write-Output "✅ Windows Terminal configuration saved to: $($savedConfig.SettingsPath)"
+    [void]$changedLocations.Add("✅ Windows Terminal configuration saved to: $($savedConfig.SettingsPath)")
+
+    Write-Output ""
+    foreach ($changedLocation in $changedLocations) {
+        Write-Output $changedLocation
+    }
 }
 catch {
     Write-Output $_

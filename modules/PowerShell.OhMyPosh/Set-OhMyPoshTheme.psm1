@@ -4,26 +4,32 @@ Import-Module ".\modules\Terminal.UI\Request-SetupTerminalConsent.psm1" -ErrorAc
 
 # Sets the Oh My Posh theme selection used by the PowerShell profile.
 # [input-param] ThemeName: theme file name to apply
+# [input-param] ThemeDirectory: destination directory where the theme file should be stored
 # [output-param] String: validated full path to the selected theme
-# [side-effect] None.
+# [side-effect] Creates or updates the selected theme file in ThemeDirectory.
 function Set-OhMyPoshTheme {
     param(
         [string] $ThemeName = 'marcduiker.omp.json',
 
-        [string] $ThemeUrl = 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/marcduiker.omp.json'
+        [string] $ThemeUrl = 'https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/marcduiker.omp.json',
+
+        [string] $ThemeDirectory
     )
 
-    $projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
-    $themeDirectory = Join-Path $projectRoot 'resources\oh-my-posh'
-    $themePath = Join-Path $themeDirectory $ThemeName
+    if ([string]::IsNullOrWhiteSpace($ThemeDirectory)) {
+        $projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+        $ThemeDirectory = Join-Path $projectRoot 'resources\oh-my-posh'
+    }
 
-    if (-not (Test-Path -LiteralPath $themeDirectory -PathType Container)) {
-        New-Item -ItemType Directory -Path $themeDirectory -Force | Out-Null
+    $themePath = Join-Path $ThemeDirectory $ThemeName
+
+    if (-not (Test-Path -LiteralPath $ThemeDirectory -PathType Container)) {
+        New-Item -ItemType Directory -Path $ThemeDirectory -Force | Out-Null
     }
 
     $downloadApproved = Request-SetupTerminalConsent `
         -Title 'Download Oh My Posh theme' `
-        -Description "The setup will download the '$ThemeName' theme file and store it in the project resources directory." `
+        -Description "The setup will download the '$ThemeName' theme file and store it next to the Windows Terminal settings file." `
         -Sources @($ThemeUrl) `
         -Consequence "The downloaded theme will be saved to '$themePath' and used by the PowerShell profile." `
         -DefaultNo
@@ -38,7 +44,8 @@ function Set-OhMyPoshTheme {
     } catch {
         Write-Host "Theme download failed. Trying installed/local Oh My Posh theme sources."
         try {
-            $themePath = Get-OhMyPoshThemePath -ThemeName $ThemeName
+            $sourceThemePath = Get-OhMyPoshThemePath -ThemeName $ThemeName
+            Copy-Item -LiteralPath $sourceThemePath -Destination $themePath -Force
         } catch {
             $ohMyPosh = Get-Command oh-my-posh -ErrorAction SilentlyContinue
             if (-not $ohMyPosh) {
