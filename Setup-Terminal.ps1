@@ -213,5 +213,6 @@ try {
     }
 }
 catch {
-    Write-Output $_
+    Write-Error $_
+    exit 1
 }
