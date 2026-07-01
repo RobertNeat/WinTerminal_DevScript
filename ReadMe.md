@@ -4,14 +4,15 @@
 
 Setup-Terminal is a PowerShell_5-based setup project for applying a consistent Windows Terminal configuration on a developer workstation.
 
-The project currently focuses on detecting common developer runtimes and creating Windows Terminal profiles for them. It is designed to grow over time with more profiles, prompt configuration, and terminal setup helpers.
+The project currently focuses on detecting common developer runtimes, creating Windows Terminal profiles for them, and optionally configuring an Oh My Posh prompt for PowerShell.
 
 This script only reaches web in order to download:
 
-- Oh My Posh
-- winfeth
+- Oh My Posh through `winget`
+- FiraCode Nerd Font ZIP from a tagged official Nerd Fonts GitHub release
+- Oh My Posh `themes.zip` archive from the current GitHub release
 
-The key consideration is that the script does not download any other assets or configuration files from the web. All other configuration is done locally.
+Direct file downloads are verified with SHA-256 before the downloaded file is used. The Nerd Font archive is downloaded from a tagged release and checked against the checksum file published with the same Nerd Fonts release. The Oh My Posh themes archive is downloaded from the current release, checked against the SHA-256 digest exposed by the GitHub release asset, and only the selected theme file is extracted.
 
 ## What It Configures
 
@@ -25,10 +26,10 @@ The key consideration is that the script does not download any other assets or c
 - Selected Windows Terminal dynamic profile sources
 - Terminal color schemes
 - Additional Windows Terminal profile settings
-- Oh My Posh setup and winfetch for PowerShell
+- Oh My Posh setup for PowerShell
+- FiraCode Nerd Font installation from the official Nerd Fonts ZIP archive
+- Oh My Posh theme setup from the verified release themes archive
 - Basic terminal behavior settings, such as tab width mode and web search URL
-
-Planned additions include more profiles and setup steps, including Winfetch configuration.
 
 <p align="center">
   <img src="resources/shells_image.png" alt="Multiple shells outcome screenshot">
@@ -42,7 +43,7 @@ Planned additions include more profiles and setup steps, including Winfetch conf
 - Git, Python, and Node.js, Java installed if you want matching profiles to be generated
   - best to install using: official installer, Python version manager, Node version manager, Java JDK Adoptium Temurin
 
-- Oh My Posh if you want prompt customization to work
+- `winget` if you want the setup to install or upgrade Oh My Posh
 
 ## Usage
 
@@ -75,7 +76,15 @@ For example, `134` selects Git, Node.js, and Java profiles, and `abc` selects th
 
 ## Side effects
 
-The script will download files from the web (but each time it will ask for permission with reference to the source URL).
+The script will download files from the web only after asking for permission with reference to the source URL.
+
+Direct downloaded files are written to a temporary location first and verified before use:
+
+- `FiraCode.zip` from the tagged Nerd Fonts GitHub release is verified against `SHA-256.txt` from the same release.
+- `themes.zip` from the current Oh My Posh GitHub release is verified against the SHA-256 digest exposed by the release asset metadata. The setup extracts only `marcduiker.omp.json` from that archive.
+
+Oh My Posh itself is installed or upgraded through `winget`, which uses the configured winget package source.
+
 Additionally the script modifies the files in system locations as follows:
 
 echo "$HOME\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\icons"

@@ -30,7 +30,7 @@ function Save-TerminalConfiguration {
     $depth = 100
     try { $json = $toSerialize | ConvertTo-Json -Depth $depth -ErrorAction Stop } catch {
         # fallback: try larger depth if ConvertTo-Json failed due to depth
-        $depth = 200
+        $depth = 100
         $json = $toSerialize | ConvertTo-Json -Depth $depth
     }
 

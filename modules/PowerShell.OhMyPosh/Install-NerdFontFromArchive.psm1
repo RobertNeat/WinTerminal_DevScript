@@ -1,4 +1,5 @@
 Import-Module (Join-Path $PSScriptRoot '..\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Utils\Invoke-VerifiedReleaseDownload.psm1') -ErrorAction Stop
 
 # Installs a Nerd Font directly from the official Nerd Fonts release archive.
 # [input-param] Name: Nerd Fonts archive font name, for example FiraCode
@@ -8,6 +9,8 @@ Import-Module (Join-Path $PSScriptRoot '..\Terminal.UI\Request-SetupTerminalCons
 function Install-NerdFontFromArchive {
     param(
         [string] $Name,
+
+        [string] $ReleaseTag = 'v3.4.0',
 
         [ValidateSet('CurrentUser', 'AllUsers')]
         [string] $Scope = 'CurrentUser'
@@ -44,12 +47,13 @@ function Install-NerdFontFromArchive {
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('Setup-Terminal-NerdFont-' + [guid]::NewGuid().ToString('N'))
     $archivePath = Join-Path $tempRoot ($Name + '.zip')
     $extractPath = Join-Path $tempRoot 'extracted'
-    $downloadUri = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$Name.zip"
+    $downloadUri = "https://github.com/ryanoasis/nerd-fonts/releases/download/$ReleaseTag/$Name.zip"
+    $checksumUri = "https://github.com/ryanoasis/nerd-fonts/releases/download/$ReleaseTag/SHA-256.txt"
 
     $downloadApproved = Request-SetupTerminalConsent `
         -Title "Download Nerd Font archive: $Name" `
-        -Description 'The setup will download a font archive before any font files are installed.' `
-        -Sources @($downloadUri) `
+        -Description 'The setup will download a font archive and verify its SHA-256 checksum before any font files are installed.' `
+        -Sources @($downloadUri, $checksumUri) `
         -Consequence "The archive will be stored temporarily under '$tempRoot' and removed after installation." `
         -DefaultNo
 
@@ -60,7 +64,11 @@ function Install-NerdFontFromArchive {
     New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
 
     try {
-        Invoke-WebRequest -Uri $downloadUri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
+        Invoke-VerifiedReleaseDownload `
+            -Uri $downloadUri `
+            -OutFile $archivePath `
+            -ChecksumUri $checksumUri `
+            -ChecksumFileName ($Name + '.zip') | Out-Null
         Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force
 
         $fontFiles = @(Get-ChildItem -Path $extractPath -Recurse -File -Include '*.ttf', '*.otf')
