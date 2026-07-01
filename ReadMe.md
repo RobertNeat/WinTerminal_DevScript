@@ -14,6 +14,10 @@ This script only reaches web in order to download:
 
 Direct file downloads are verified with SHA-256 before the downloaded file is used. The Nerd Font archive is downloaded from a tagged release and checked against the checksum file published with the same Nerd Fonts release. The Oh My Posh themes archive is downloaded from the current release, checked against the SHA-256 digest exposed by the GitHub release asset, and only the selected theme file is extracted.
 
+<p align="center">
+  <img src="resources/shells_image.png" alt="Multiple shells outcome screenshot">
+</p>
+
 ## What It Configures
 
 - Windows Terminal `settings.json`
@@ -31,9 +35,7 @@ Direct file downloads are verified with SHA-256 before the downloaded file is us
 - Oh My Posh theme setup from the verified release themes archive
 - Basic terminal behavior settings, such as tab width mode and web search URL
 
-<p align="center">
-  <img src="resources/shells_image.png" alt="Multiple shells outcome screenshot">
-</p>
+
 
 ## Requirements
 
