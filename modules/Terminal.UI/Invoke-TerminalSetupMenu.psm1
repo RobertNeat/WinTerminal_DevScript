@@ -1,7 +1,10 @@
 Import-Module (Join-Path $PSScriptRoot 'New-TerminalSetupOption.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'Show-TerminalSetupMenu.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Invoke-TerminalSetupTextMenu.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Test-TerminalSetupInteractiveHost.psm1') -ErrorAction Stop
 
 # Opens the interactive Windows Terminal setup menu and returns the user's selection.
+# [input-param] InitialInfoLines: optional system information lines displayed above the menu.
 # [output-param] PSCustomObject: Applied flag plus selected Profiles and Steps arrays when applied; Applied=false when cancelled
 # [side-effect] Reads keyboard input from the console and redraws the host console until Apply, Cancel, or Escape is selected.
 function Invoke-TerminalSetupMenu {
@@ -30,6 +33,13 @@ function Invoke-TerminalSetupMenu {
     $cursor = 0
     $actionCursor = 0
     $isActionRow = $false
+
+    if (-not (Test-TerminalSetupInteractiveHost)) {
+        return Invoke-TerminalSetupTextMenu `
+            -InitialInfoLines $InitialInfoLines `
+            -ProfileOptions $profileOptions `
+            -StepOptions $stepOptions
+    }
 
     while ($true) {
         Show-TerminalSetupMenu `

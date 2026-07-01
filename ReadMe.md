@@ -54,6 +54,25 @@ Run the setup script from the repository root:
 
 The script detects installed developer tools, updates Windows Terminal profiles, applies additional settings, and saves the configuration back to the active Windows Terminal `settings.json`.
 
+If the interactive TUI cannot use the current host, the script falls back to text input mode. In that mode select profiles by typing combined numbers:
+
+- `1` Git
+- `2` Python
+- `3` Node.js
+- `4` Java
+
+Then select setup steps by typing combined letters:
+
+- `a` Update Windows Terminal profiles (+ profile icons)
+- `b` Remove profiles outside Windows PowerShell and Command Prompt
+- `c` Disable selected dynamic profile sources (Azure, SSH)
+- `d` Apply profiles color schemes
+- `e` Apply additional profile settings
+- `f` Apply additional terminal settings
+- `g` Install/configure Oh My Posh
+
+For example, `134` selects Git, Node.js, and Java profiles, and `abc` selects the first three setup steps.
+
 ## Side effects
 
 The script will download files from the web (but each time it will ask for permission with reference to the source URL).
