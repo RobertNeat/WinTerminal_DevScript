@@ -18,6 +18,7 @@ function Invoke-TerminalSetupMenu {
 
     $stepOptions = @(
         New-TerminalSetupOption -Key 'profiles' -Label 'Update Windows Terminal profiles (+ profile icons)' -Group 'Step'
+        New-TerminalSetupOption -Key 'removeOtherProfiles' -Label 'Remove profiles outside Windows PowerShell and Command Prompt' -Group 'Step'
         New-TerminalSetupOption -Key 'dynamicProfiles' -Label 'Disable selected dynamic profile sources (Azure, SSH)' -Group 'Step'
         New-TerminalSetupOption -Key 'colorSchemes' -Label 'Apply profiles color schemes' -Group 'Step'
         New-TerminalSetupOption -Key 'profileSettings' -Label 'Apply additional profile settings (showMarksOnScrollbar, autoMarkPrompts, PowerShell -NoLogo)' -Group 'Step'

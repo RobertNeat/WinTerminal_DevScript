@@ -14,7 +14,8 @@ Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction
 # [input-param] SettingsPath: optional settings.json path used when loading the configuration automatically
 # [input-param] JsonDepth: serialization depth passed to Get-TerminalConfiguration
 # [output-param] object: the same SettingsObject after modification
-# [side-effect] Modifies profiles.list in the passed object, removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, Python, and Java/jshell when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
+# [input-param] RemoveOtherProfiles: when true, removes profiles other than CMD/Windows PowerShell before adding selected developer profiles
+# [side-effect] Modifies profiles.list in the passed object, optionally removes profiles other than CMD/Windows PowerShell, adds Git Bash, Node, Python, and Java/jshell when executables are detected, copies profile icon resources next to settings.json, assigns profile icon paths, and sets Git Bash to start in %USERPROFILE%.
 function Set-TerminalProfiles {
     [CmdletBinding()]
     param(
@@ -35,7 +36,10 @@ function Set-TerminalProfiles {
 
         [Parameter(Mandatory = $false)]
         [ValidateRange(2, 100)]
-        [int] $JsonDepth = 100
+        [int] $JsonDepth = 100,
+
+        [Parameter(Mandatory = $false)]
+        [bool] $RemoveOtherProfiles = $true
     )
 
     # If not provided, load existing configuration so we still operate on an object in memory.
@@ -71,10 +75,10 @@ function Set-TerminalProfiles {
 
     $existing = @($settingsRoot.profiles.list)
 
-    # Step 1: keep only CMD + Windows PowerShell profiles
+    # Step 1: optionally keep only CMD + Windows PowerShell profiles
     $kept = New-Object System.Collections.ArrayList
     foreach ($p in $existing) {
-        if ((Test-CmdProfile -Profile $p) -or (Test-WindowsPowerShellProfile -Profile $p)) {
+        if ((-not $RemoveOtherProfiles) -or (Test-CmdProfile -Profile $p) -or (Test-WindowsPowerShellProfile -Profile $p)) {
             [void]$kept.Add($p)
         }
     }

@@ -131,9 +131,13 @@ try {
     # 3. Update Windows Terminal profiles (+ profile icons)
     $configTerminalProfiles = $config
     if ($selectedSteps -contains 'profiles') {
-        $configTerminalProfiles = Set-TerminalProfiles -ExecutablesMap $executables_map -SettingsObject $config -SettingsPath $terminal_settings_path
+        $removeOtherProfiles = $selectedSteps -contains 'removeOtherProfiles'
+        $configTerminalProfiles = Set-TerminalProfiles -ExecutablesMap $executables_map -SettingsObject $config -SettingsPath $terminal_settings_path -RemoveOtherProfiles $removeOtherProfiles
         $terminalSettingsDirectory = Split-Path -Path $terminal_settings_path -Parent
         [void]$changedLocations.Add("✅ Windows Terminal profile icons copied/updated in: $(Join-Path -Path $terminalSettingsDirectory -ChildPath 'icons')")
+        if ($removeOtherProfiles) {
+            [void]$changedLocations.Add("✅ Windows Terminal profiles outside Windows PowerShell and Command Prompt removed before selected profiles were added.")
+        }
     }
     #[debug] Write-Output $configTerminalProfiles | Format-List
     #[debug] Write-Output $configTerminalProfiles.settings | Format-List

@@ -54,6 +54,17 @@ Run the setup script from the repository root:
 
 The script detects installed developer tools, updates Windows Terminal profiles, applies additional settings, and saves the configuration back to the active Windows Terminal `settings.json`.
 
+## Side effects
+
+The script will download files from the web (but each time it will ask for permission with reference to the source URL).
+Additionally the script modifies the files in system locations as follows:
+
+echo "$HOME\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\icons"
+echo "$HOME\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\marcduiker.omp.json"
+echo "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
+echo "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+echo "$HOME\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+
 ## Project Structure
 
 ```text
