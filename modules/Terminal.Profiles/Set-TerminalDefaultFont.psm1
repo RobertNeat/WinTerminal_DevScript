@@ -1,4 +1,4 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Utils\Initialize-NoteProperty.psm1') -ErrorAction Stop
 
 # Sets the default font face for Windows Terminal profiles and PowerShell profiles.
 # [input-param] Configuration: configuration object or wrapper containing Settings and TerminalVersion

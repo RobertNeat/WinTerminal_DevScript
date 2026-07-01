@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'ConvertTo-NormalizedPathEntry.psm1') -ErrorAction Stop
 
 # Checks whether a PATH variable contains the specified directory.
 # [input-param] PathVariableValue: semicolon-separated PATH variable value

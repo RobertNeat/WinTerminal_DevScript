@@ -1,4 +1,4 @@
-Import-Module "$PSScriptRoot\Test-NerdFontInstalled.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Test-NerdFontInstalled.psm1') -ErrorAction Stop
 
 # Installs a Nerd Font through NerdFonts or the official Nerd Fonts archive fallback.
 # [input-param] FontName: NerdFonts module/archive font name to install

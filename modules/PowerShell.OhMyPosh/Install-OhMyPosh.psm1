@@ -1,5 +1,5 @@
-Import-Module ".\modules\PowerShell.OhMyPosh\Invoke-ConsoleSpinnerCommand.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.UI\Request-SetupTerminalConsent.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Invoke-ConsoleSpinnerCommand.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
 
 # Installs or upgrades Oh My Posh using winget.
 # [output-param] PSCustomObject: package id, winget action, and winget exit code

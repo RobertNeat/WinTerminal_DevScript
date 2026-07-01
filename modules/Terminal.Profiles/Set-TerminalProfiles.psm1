@@ -1,12 +1,12 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Configuration\Resolve-FilePath.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Update-Profile.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Copy-TerminalProfileIcons.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileIcon.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileStartingDirectory.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1" -ErrorAction Stop
-Import-Module ".\modules\_Tests\Test-CmdProfile.psm1" -ErrorAction Stop
-Import-Module ".\modules\_Tests\Test-WindowsPowerShellProfile.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Utils\Initialize-NoteProperty.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Terminal.Configuration\Resolve-FilePath.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Update-Profile.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Copy-TerminalProfileIcons.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Set-TerminalProfileIcon.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Set-TerminalProfileStartingDirectory.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Terminal.Configuration\Get-TerminalConfiguration.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\_Tests\Test-CmdProfile.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\_Tests\Test-WindowsPowerShellProfile.psm1') -ErrorAction Stop
 
 # Normalizes the Windows Terminal profile list and adds developer tool profiles.
 # [input-param] ExecutablesMap: map of executable paths; supported keys are git, node, python, and java

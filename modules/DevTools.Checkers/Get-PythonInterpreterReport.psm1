@@ -1,11 +1,11 @@
-Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Test-PathContainsDirectory.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Python\Get-PythonSysExecutable.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Python\Get-PythonVersion.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Python\Get-PyenvRoot.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Python\Resolve-PyenvPythonShim.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Search\Find-ExecutableFile.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Get-EnvironmentVariableValue.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Test-PathContainsDirectory.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Python\Get-PythonSysExecutable.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Python\Get-PythonVersion.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Python\Get-PyenvRoot.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Python\Resolve-PyenvPythonShim.psm1') -ErrorAction Stop
 
 
 # Checks the Python interpreter installation and pyenv-win configuration.

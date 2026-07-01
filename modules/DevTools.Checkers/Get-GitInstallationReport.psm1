@@ -1,11 +1,11 @@
-Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Test-PathContainsDirectory.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\ConvertFrom-VersionText.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Git\Find-GitBashLauncher.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Git\Get-GitInstallationManager.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Git\ConvertFrom-GitVersionText.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Search\Find-ExecutableFile.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Get-EnvironmentVariableValue.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Test-PathContainsDirectory.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\ConvertFrom-VersionText.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Git\Find-GitBashLauncher.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Git\Get-GitInstallationManager.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Git\ConvertFrom-GitVersionText.psm1') -ErrorAction Stop
 
 # Checks the Git for Windows installation and related tool configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, LatestVersion, UpdateAvailable, WingetAvailable, GitHome, BashHome, Manager, GitExecPath, GitSsh, GitSshCommand, GitAskPass, and Errors fields

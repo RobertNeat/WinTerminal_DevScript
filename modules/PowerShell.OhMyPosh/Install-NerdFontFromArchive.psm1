@@ -1,5 +1,4 @@
-$projectRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
-Import-Module (Join-Path $projectRoot 'modules\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
 
 # Installs a Nerd Font directly from the official Nerd Fonts release archive.
 # [input-param] Name: Nerd Fonts archive font name, for example FiraCode

@@ -1,10 +1,10 @@
-Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Utils\Test-PathContainsDirectory.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Node\ConvertFrom-NodeVersionText.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Node\Get-NodeRealExecutablePath.psm1" -ErrorAction Stop
-Import-Module ".\modules\DevTools.Node\Get-NodeVersion.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Search\Find-ExecutableFile.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Get-EnvironmentVariableValue.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Test-PathContainsDirectory.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Node\ConvertFrom-NodeVersionText.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Node\Get-NodeRealExecutablePath.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Node\Get-NodeVersion.psm1') -ErrorAction Stop
 
 # Checks the Node.js installation and nvm-windows configuration.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, AllVersions, Manager, NodeHome, NvmHome, NvmSymlink, and Errors fields

@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Git\Get-GitCandidateRoot.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Get-GitCandidateRoot.psm1') -ErrorAction Stop
 
 # Finds bash.exe or git-bash.exe for the detected Git installation.
 # [input-param] GitExePath: full path to git.exe

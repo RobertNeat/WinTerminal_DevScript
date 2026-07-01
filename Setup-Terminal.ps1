@@ -9,6 +9,31 @@
     7) writes the updated configuration back to settings.json.
 #>
 
+# Windows Terminal configuration modules
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Configuration\Get-TerminalConfiguration.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Configuration\Save-TerminalConfiguration.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.IO\Add-TerminalSettings.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Profiles\Set-TerminalProfiles.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Profiles\Set-TerminalDefaultFont.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.Themes\Set-TerminalColorSchemes.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\Terminal.UI\Invoke-TerminalSetupMenu.psm1') -ErrorAction Stop
+
+# Developer tool checkers
+Import-Module (Join-Path $PSScriptRoot 'modules\DevTools.Checkers\Get-JavaInstallationReport.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\DevTools.Checkers\Get-PythonInterpreterReport.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\DevTools.Checkers\Get-NodeRuntimeReport.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\DevTools.Checkers\Get-GitInstallationReport.psm1') -ErrorAction Stop
+
+# PowerShell profile / prompt configuration
+Import-Module (Join-Path $PSScriptRoot 'modules\PowerShell.OhMyPosh\Install-OhMyPosh.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\PowerShell.OhMyPosh\Install-NerdFont.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\PowerShell.OhMyPosh\Set-OhMyPoshTheme.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'modules\PowerShell.OhMyPosh\Set-PowershellProfile.psm1') -ErrorAction Stop
+
 # Ctrl+Shift+P -> Change file encoding -> UTF-8 with BOM
 # Keep UTF-8 output so Polish characters are displayed correctly in PowerShell.
 chcp 65001 | Out-Null
@@ -16,31 +41,6 @@ chcp 65001 | Out-Null
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-
-# Windows Terminal configuration modules
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalSettingsPath.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Configuration\Get-TerminalConfiguration.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Configuration\Save-TerminalConfiguration.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.IO\Add-TerminalSettings.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfiles.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Disable-TerminalDynamicProfiles.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalProfileAdditionalSettings.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Profiles\Set-TerminalDefaultFont.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Themes\Set-TerminalColorSchemes.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.UI\Invoke-TerminalSetupMenu.psm1" -ErrorAction Stop
-
-# Developer tool checkers
-Import-Module ".\modules\DevTools.Checkers\Get-JavaInstallationReport.psm1"
-Import-Module ".\modules\DevTools.Checkers\Get-PythonInterpreterReport.psm1"
-Import-Module ".\modules\DevTools.Checkers\Get-NodeRuntimeReport.psm1"
-Import-Module ".\modules\DevTools.Checkers\Get-GitInstallationReport.psm1"
-
-# PowerShell profile / prompt configuration
-Import-Module ".\modules\PowerShell.OhMyPosh\Install-OhMyPosh.psm1" -ErrorAction Stop
-Import-Module ".\modules\PowerShell.OhMyPosh\Install-NerdFont.psm1" -ErrorAction Stop
-Import-Module ".\modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1" -ErrorAction Stop
-Import-Module ".\modules\PowerShell.OhMyPosh\Set-OhMyPoshTheme.psm1" -ErrorAction Stop
-Import-Module ".\modules\PowerShell.OhMyPosh\Set-PowershellProfile.psm1" -ErrorAction Stop
 
 # System information shown at the beginning of the setup.
 $os = (Get-CimInstance Win32_OperatingSystem).Caption

@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Node\ConvertFrom-NodeVersionText.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'ConvertFrom-NodeVersionText.psm1') -ErrorAction Stop
 
 # Gets and parses the Node.js version for the specified executable.
 # [input-param] NodePath: path to node.exe or the node command

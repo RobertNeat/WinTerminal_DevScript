@@ -1,4 +1,4 @@
-Import-Module "$PSScriptRoot\Write-StatusLines.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Write-StatusLines.psm1') -ErrorAction Stop
 
 # Gets and prints a cached daily system status summary.
 # [input-param] CacheTtlSeconds: number of seconds before cached status output is refreshed

@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Utils\Get-EnvironmentVariableValue.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\Get-EnvironmentVariableValue.psm1') -ErrorAction Stop
 
 # Finds the pyenv-win root directory.
 # [output-param] string|null: PYENV_ROOT/PYENV path or the default pyenv-win path

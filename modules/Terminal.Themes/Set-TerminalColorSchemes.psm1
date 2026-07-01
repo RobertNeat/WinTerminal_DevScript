@@ -1,5 +1,5 @@
-Import-Module ".\modules\Utils\Initialize-NoteProperty.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.Themes\Get-TerminalColorSchemes.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Utils\Initialize-NoteProperty.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Get-TerminalColorSchemes.psm1') -ErrorAction Stop
 
 # Adds or updates built-in Windows Terminal color schemes.
 # [input-param] Configuration: configuration object or wrapper containing the Settings property
@@ -12,20 +12,6 @@ function Set-TerminalColorSchemes {
     )
 
     if (-not $Configuration) { throw 'Configuration is required (pass the object from Get-TerminalConfiguration).' }
-
-    # # Load local color scheme provider if available
-    # try {
-    #     if ($PSScriptRoot) {
-    #         $csPath = Join-Path $PSScriptRoot 'Get-TerminalColorSchemes.psm1'
-    #         if (Test-Path -LiteralPath $csPath) { . $csPath }
-    #     }
-    # } catch {
-    #     # continue; fall back to any installed module
-    # }
-
-    if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {
-        try { Import-Module -Name Get-TerminalColorSchemes -ErrorAction Stop } catch {}
-    }
 
     if (-not (Get-Command -Name Get-TerminalColorSchemes -ErrorAction SilentlyContinue)) {
         throw 'Get-TerminalColorSchemes function not found. Ensure Get-TerminalColorSchemes.psm1 is present.'

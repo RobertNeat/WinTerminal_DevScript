@@ -1,4 +1,4 @@
-Import-Module ".\modules\Utils\Get-ExecutableToken.psm1"  -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Utils\Get-ExecutableToken.psm1')  -ErrorAction Stop
 
 # Checks whether a Windows Terminal profile represents Windows PowerShell.
 # [input-param] Profile: profile object with name and/or commandline fields

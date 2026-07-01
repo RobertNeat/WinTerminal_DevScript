@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Utils\ConvertTo-NormalizedPathEntry.psm1') -ErrorAction Stop
 
 # Determines Git installation base directories from the git.exe path.
 # [input-param] GitExePath: full path to git.exe

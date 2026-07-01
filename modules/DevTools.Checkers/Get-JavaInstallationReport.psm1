@@ -1,4 +1,4 @@
-Import-Module ".\modules\DevTools.Search\Find-ExecutableFile.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\DevTools.Search\Find-ExecutableFile.psm1') -ErrorAction Stop
 
 # Checks the Java compiler and runtime installation.
 # [output-param] PSCustomObject: report with Name, Installed, InPath, Version, JavaHome, JavaExecutable, and Errors fields

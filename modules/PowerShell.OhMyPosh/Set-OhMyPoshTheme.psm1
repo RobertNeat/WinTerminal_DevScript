@@ -1,6 +1,6 @@
-Import-Module ".\modules\PowerShell.OhMyPosh\Get-OhMyPoshThemePath.psm1" -ErrorAction Stop
-Import-Module ".\modules\PowerShell.OhMyPosh\Set-OhMyPoshThemePerformanceOptions.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.UI\Request-SetupTerminalConsent.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Get-OhMyPoshThemePath.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Set-OhMyPoshThemePerformanceOptions.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot '..\Terminal.UI\Request-SetupTerminalConsent.psm1') -ErrorAction Stop
 
 # Sets the Oh My Posh theme selection used by the PowerShell profile.
 # [input-param] ThemeName: theme file name to apply

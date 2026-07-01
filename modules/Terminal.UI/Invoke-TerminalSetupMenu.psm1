@@ -1,5 +1,5 @@
-Import-Module ".\modules\Terminal.UI\New-TerminalSetupOption.psm1" -ErrorAction Stop
-Import-Module ".\modules\Terminal.UI\Show-TerminalSetupMenu.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'New-TerminalSetupOption.psm1') -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Show-TerminalSetupMenu.psm1') -ErrorAction Stop
 
 # Opens the interactive Windows Terminal setup menu and returns the user's selection.
 # [output-param] PSCustomObject: Applied flag plus selected Profiles and Steps arrays when applied; Applied=false when cancelled

@@ -1,4 +1,4 @@
-Import-Module ".\modules\Terminal.UI\Write-TerminalSetupMenuLine.psm1" -ErrorAction Stop
+Import-Module (Join-Path $PSScriptRoot 'Write-TerminalSetupMenuLine.psm1') -ErrorAction Stop
 
 # Renders the Windows Terminal setup selection menu.
 # [input-param] ProfileOptions: selectable developer profile options
