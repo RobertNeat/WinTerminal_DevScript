@@ -1,0 +1,108 @@
+name: Release Setup-Terminal
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Existing tag to release, for example v1.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build release asset
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref }}
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = Get-ChildItem -Path . -Recurse -File -Include *.ps1,*.psm1 |
+            Where-Object { $_.FullName -notmatch '\\\.git\\' }
+
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref] $tokens, [ref] $errors) | Out-Null
+
+            if ($errors.Count -gt 0) {
+              $message = ($errors | ForEach-Object { "$($file.FullName):$($_.Extent.StartLineNumber): $($_.Message)" }) -join [Environment]::NewLine
+              throw $message
+            }
+          }
+
+      - name: Build release package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $releaseRoot = Join-Path $PWD 'dist\Setup-Terminal'
+          $zipPath = Join-Path $PWD 'dist\Setup-Terminal.zip'
+          $checksumPath = Join-Path $PWD 'dist\Setup-Terminal.zip.sha256'
+
+          if (Test-Path -LiteralPath 'dist') {
+            Remove-Item -LiteralPath 'dist' -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
+          Copy-Item -LiteralPath 'Setup-Terminal.ps1' -Destination $releaseRoot
+          Copy-Item -LiteralPath 'modules' -Destination $releaseRoot -Recurse
+          Copy-Item -LiteralPath 'ReadMe.md' -Destination $releaseRoot
+          Copy-Item -LiteralPath 'LICENSE' -Destination $releaseRoot
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            $releaseRoot,
+            $zipPath,
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false
+          )
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath).Hash.ToLowerInvariant()
+          "$hash  Setup-Terminal.zip" | Set-Content -LiteralPath $checksumPath -Encoding ascii
+
+      - name: Write release notes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tagName = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.tag_name }}' } else { '${{ github.ref_name }}' }
+          @'
+          Setup-Terminal {0}
+
+          Download `Setup-Terminal.zip`, extract it, and run:
+
+          ```powershell
+          .\Setup-Terminal.ps1
+          ```
+
+          The ZIP contains the setup script and the required `modules` directory. The checksum is published as `Setup-Terminal.zip.sha256`.
+          '@.Trim() -f $tagName | Set-Content -LiteralPath 'dist\release-notes.md' -Encoding utf8
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tagName = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ inputs.tag_name }}' } else { '${{ github.ref_name }}' }
+          $assets = @(
+            'dist\Setup-Terminal.zip#Setup-Terminal.zip',
+            'dist\Setup-Terminal.zip.sha256#Setup-Terminal.zip.sha256'
+          )
+
+          gh release view $tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tagName @assets --clobber
+          } else {
+            gh release create $tagName @assets --title "Setup-Terminal $tagName" --notes-file 'dist\release-notes.md' --verify-tag
+          }

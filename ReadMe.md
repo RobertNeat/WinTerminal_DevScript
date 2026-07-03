@@ -35,8 +35,6 @@ Direct file downloads are verified with SHA-256 before the downloaded file is us
 - Oh My Posh theme setup from the verified release themes archive
 - Basic terminal behavior settings, such as tab width mode and web search URL
 
-
-
 ## Requirements
 
 - Windows
@@ -48,6 +46,28 @@ Direct file downloads are verified with SHA-256 before the downloaded file is us
 - `winget` if you want the setup to install or upgrade Oh My Posh
 
 ## Usage
+
+### From a GitHub Release
+
+Download the latest release package:
+
+[Setup-Terminal.zip](https://github.com/RobertNeat/WinTerminal_DevScript/releases/latest/download/Setup-Terminal.zip)
+
+Extract the ZIP, open PowerShell in the extracted `Setup-Terminal` directory, and run:
+
+```powershell
+.\Setup-Terminal.ps1
+```
+
+The ZIP is the minimal runtime package. It contains `Setup-Terminal.ps1` and the required `modules` directory, so the full repository does not need to be cloned.
+
+To create release:
+
+1. commit and push changes to remote repository
+2. create a new tag (e.g. git tag v1.0.0)
+3. push the tag to remote (e.g. git push origin v1.0.0)
+
+### From the Repository
 
 Run the setup script from the repository root:
 
