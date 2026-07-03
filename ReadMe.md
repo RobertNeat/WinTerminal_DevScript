@@ -61,6 +61,19 @@ Extract the ZIP, open PowerShell in the extracted `Setup-Terminal` directory, an
 
 The ZIP is the minimal runtime package. It contains `Setup-Terminal.ps1` and the required `modules` directory, so the full repository does not need to be cloned.
 
+If Windows blocks the downloaded script because it came from the internet, unblock the extracted files first:
+
+```powershell
+Get-ChildItem -Path . -Recurse | Unblock-File
+.\Setup-Terminal.ps1
+```
+
+Alternatively, run the setup with an execution policy override for this PowerShell process only:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\Setup-Terminal.ps1
+```
+
 To create release:
 
 1. commit and push changes to remote repository
