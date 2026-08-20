@@ -131,7 +131,11 @@ function Set-OhMyPoshTheme {
                 throw "Oh My Posh theme could not be exported: $themeId"
             }
 
-            $themeJson | Set-Content -LiteralPath $themePath -Encoding UTF8
+            # Keep the exported config compatible with Oh My Posh when this setup
+            # runs under Windows PowerShell 5.1, whose UTF8 encoding emits a BOM.
+            $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+            $exportedThemeJson = ($themeJson -join [Environment]::NewLine) + [Environment]::NewLine
+            [System.IO.File]::WriteAllText($themePath, $exportedThemeJson, $utf8WithoutBom)
         }
     }
 

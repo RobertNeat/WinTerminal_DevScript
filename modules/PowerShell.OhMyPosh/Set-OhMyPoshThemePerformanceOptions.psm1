@@ -11,7 +11,9 @@ function Set-OhMyPoshThemePerformanceOptions {
         return
     }
 
-    $theme = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    # Windows PowerShell 5.1 otherwise treats UTF-8 files without a BOM as the
+    # active ANSI code page and corrupts Nerd Font glyphs on the next setup run.
+    $theme = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($block in $theme.blocks) {
         foreach ($segment in $block.segments) {
             if ($segment.type -eq 'git') {
@@ -28,7 +30,11 @@ function Set-OhMyPoshThemePerformanceOptions {
         }
     }
 
-    $theme | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
+    # Windows PowerShell 5.1 writes a BOM when Set-Content -Encoding UTF8 is used.
+    # Oh My Posh 30.6.5 rejects that BOM before parsing the JSON configuration.
+    $themeJson = $theme | ConvertTo-Json -Depth 100
+    $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($Path, $themeJson + [Environment]::NewLine, $utf8WithoutBom)
 }
 
 Export-ModuleMember -Function Set-OhMyPoshThemePerformanceOptions
