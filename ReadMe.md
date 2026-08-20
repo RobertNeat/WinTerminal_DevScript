@@ -152,9 +152,11 @@ Project license is not defined yet.
 
 ### Common saving locations for modified files
 
+```
 ✅ Windows Terminal profile icons copied/updated in: C:\Users\`${USER}`\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\icons
 ✅ Windows Terminal profiles outside Windows PowerShell and Command Prompt removed before selected profiles were added.
 ✅ Oh My Posh theme copied/updated at: C:\Users\`${USER}`\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\marcduiker.omp.json
 ✅ PowerShell profile updated: C:\Users\`${USER}`\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
 ✅ PowerShell profile updated: C:\Users\`${USER}`\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
 ✅ Windows Terminal configuration saved to: C:\Users\`${USER}`\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
+```
