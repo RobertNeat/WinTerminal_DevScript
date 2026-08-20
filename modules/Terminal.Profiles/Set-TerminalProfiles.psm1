@@ -95,15 +95,12 @@ function Set-TerminalProfiles {
 
     # Step 2: add Git Bash / Node / Python / Java (only when the executable exists)
 
-    $gitExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['git']) -FallbackRelativePaths @(
-        'usr\bin\bash.exe',
-        'bin\bash.exe',
-        'mingw64\bin\bash.exe',
-        'git-bash.exe'
-    )
-    if ($gitExe) {
-        $leaf = Split-Path -Path $gitExe -Leaf
-        $gitCmd = if ($leaf -and ($leaf -ieq 'bash.exe')) { '"{0}" --login -i' -f $gitExe } else { '"{0}"' -f $gitExe }
+    # Git detection already returns a verified bash.exe. Do not try directory-layout
+    # fallbacks here and never accept git-bash.exe, which opens another terminal window.
+    $gitExe = Resolve-FilePath -Candidate ([string]$ExecutablesMap['git']) -FallbackRelativePaths @()
+    $gitLeaf = if ($gitExe) { Split-Path -Path $gitExe -Leaf } else { $null }
+    if ($gitExe -and ($gitLeaf -ieq 'bash.exe')) {
+        $gitCmd = '"{0}" --login -i' -f $gitExe
         Update-Profile -Profiles $kept -Name 'Git Bash' -CommandLine $gitCmd
         [void](Set-TerminalProfileStartingDirectory -Profiles $kept -Name 'Git Bash' -StartingDirectory '%USERPROFILE%')
         if ($profileIcons.ContainsKey('git')) {

@@ -60,7 +60,7 @@ function Get-GitInstallationReport {
 				$result.BashHome   = Find-GitBashLauncher -GitExePath $gitCmd.Source
 				$result.Manager    = Get-GitInstallationManager $gitCmd.Source
 				if (-not $result.BashHome) {
-					$result.Errors.Add("Nie udało się odnaleźć bash.exe (ani git-bash.exe) dla wykrytego Git: '$($gitCmd.Source)'.")
+					$result.Errors.Add("Nie udało się odnaleźć działającego bash.exe dla wykrytego Git: '$($gitCmd.Source)'.")
 				}
 			} else {
 				$result.Errors.Add("Nie udało się sparsować wersji Git z 'git --version'. Surowy wynik: '$($gitVersionStr.Trim())'")
@@ -145,7 +145,7 @@ function Get-GitInstallationReport {
 				$result.Manager    = Get-GitInstallationManager $best.FullPath
 				$result.Errors.Add("Znaleziono 'git.exe' poza PATH: '$($best.FullPath)'. Rozważ dodanie '$($best.Directory)' do PATH.")
 				if (-not $result.BashHome) {
-					$result.Errors.Add("Nie udało się odnaleźć bash.exe (ani git-bash.exe) dla znalezionego Git: '$($best.FullPath)'.")
+					$result.Errors.Add("Nie udało się odnaleźć działającego bash.exe dla znalezionego Git: '$($best.FullPath)'.")
 				}
 
 				try {
